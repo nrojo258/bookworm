@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "993471989568",
+    "project_id": "bookworm-app-nerqi-2025",
+    "storage_bucket": "bookworm-app-nerqi-2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993471989568:android:185e1ffb05341e25155ca5",
+        "android_client_info": {
+          "package_name": "com.example.bookworm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3UOi8n6-Ncazma9yKjhi2jYAg6cYxi3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
