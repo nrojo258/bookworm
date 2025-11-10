@@ -31,9 +31,15 @@ class _ClubsState extends State<Clubs> {
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         actions: <Widget>[
-          TextButton(onPressed: () => Navigator.popAndPushNamed(context, '/search'), child: const Text('Buscar', style: _kLinkStyle)),
-          TextButton(onPressed: () {}, child: const Text('Clubs', style: TextStyle(fontSize: 18, color: Colors.black))), 
-          TextButton(onPressed: () => Navigator.popAndPushNamed(context, '/perfil'), child: const Text('Perfil', style: _kLinkStyle)),
+          TextButton(
+            onPressed: () => Navigator.popAndPushNamed(context, '/search'), child: const Text('Buscar', style: _kLinkStyle)
+            ),
+          TextButton(
+            onPressed: () {}, child: const Text('Clubs', style: TextStyle(fontSize: 18, color: Colors.black))
+            ), 
+          TextButton(
+            onPressed: () => Navigator.popAndPushNamed(context, '/perfil'), child: const Text('Perfil', style: _kLinkStyle)
+            ),
           const SizedBox(width: _kSpacing),
         ],
       ),
@@ -103,37 +109,19 @@ class _ClubsState extends State<Clubs> {
               ],
             ),
             const SizedBox(height: _kSpacing),
-
+            
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    color: _kBlockColor,
-                    alignment: Alignment.center,
-                    margin: const EdgeInsets.only(right: 5), 
-                    child: const Text(
-                      'Descubrir Clubs',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                  ),
+                TextButton(
+                  onPressed: () => Navigator.pushNamed(context, '/descubrisClubs'), child: const Text('Descubrir clubs', style: _kLinkStyle),
                 ),
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    color: _kBlockColor,
-                    alignment: Alignment.center,
-                    margin: const EdgeInsets.only(left: 5), 
-                    child: const Text(
-                      'Mis Clubs',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                  ),
+                TextButton(
+                  onPressed: () => Navigator.pushNamed(context, '/misClubs'), child: const Text('Mis clubs', style: _kLinkStyle),
                 ),
               ],
             ),
-            const SizedBox(height: _kSpacing),
-            
+
           ],
         ),
       ),
