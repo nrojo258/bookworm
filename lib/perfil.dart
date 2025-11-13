@@ -5,8 +5,22 @@ const TextStyle _kLinkStyle = TextStyle(fontSize: 18, color: Colors.black54);
 const TextStyle _kHeaderStyle = TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54);
 const double _kSpacing = 20.0; 
 
-class Perfil extends StatelessWidget {
+class Perfil extends StatefulWidget {
   const Perfil({super.key});
+
+   @override
+  State<Perfil> createState() => _PerfilState();
+}
+
+class _PerfilState extends State<Perfil> {
+  final TextEditingController _searchController = TextEditingController();
+  int _selectedSection = 0; 
+  
+  @override
+  void dispose(){
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,24 +76,82 @@ class Perfil extends StatelessWidget {
           Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/informacion'),
-                  child: const Text('Información', style: _kLinkStyle),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 0;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 0 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Información',
+                      style: _selectedSection == 0 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/miProgreso'),
-                  child: const Text('Mi Progreso', style: _kLinkStyle),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 1;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 1 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Mi progreso',
+                      style: _selectedSection == 1 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/estadisticas'),
-                  child: const Text('Estadísticas', style: _kLinkStyle),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 2;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 2 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Estadísticas',
+                      style: _selectedSection == 2 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/configuracion'),
-                  child: const Text('Configuración', style: _kLinkStyle),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 3;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 3 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Configuración',
+                      style: _selectedSection == 3 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: _kSpacing),
             
           ],
         ),

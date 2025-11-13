@@ -13,8 +13,8 @@ class Clubs extends StatefulWidget {
 }
 
 class _ClubsState extends State<Clubs> {
-
   final TextEditingController _searchController = TextEditingController();
+  int _selectedSection = 0; 
   
   @override
   void dispose(){
@@ -32,14 +32,17 @@ class _ClubsState extends State<Clubs> {
         ),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.popAndPushNamed(context, '/search'), child: const Text('Buscar', style: _kLinkStyle)
-            ),
+            onPressed: () => Navigator.popAndPushNamed(context, '/search'), 
+            child: const Text('Buscar', style: _kLinkStyle)
+          ),
           TextButton(
-            onPressed: () {}, child: const Text('Clubs', style: TextStyle(fontSize: 18, color: Colors.black))
-            ), 
+            onPressed: () {}, 
+            child: const Text('Clubs', style: TextStyle(fontSize: 18, color: Colors.black))
+          ), 
           TextButton(
-            onPressed: () => Navigator.popAndPushNamed(context, '/perfil'), child: const Text('Perfil', style: _kLinkStyle)
-            ),
+            onPressed: () => Navigator.popAndPushNamed(context, '/perfil'), 
+            child: const Text('Perfil', style: _kLinkStyle)
+          ),
           const SizedBox(width: _kSpacing),
         ],
       ),
@@ -113,18 +116,105 @@ class _ClubsState extends State<Clubs> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/descubrisClubs'), child: const Text('Descubrir clubs', style: _kLinkStyle),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 0;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 0 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Descubrir clubs',
+                      style: _selectedSection == 0 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/misClubs'), child: const Text('Mis clubs', style: _kLinkStyle),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedSection = 1;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: _selectedSection == 1 ? Colors.black12 : Colors.transparent,
+                    ),
+                    child: Text(
+                      'Mis clubs',
+                      style: _selectedSection == 1 
+                          ? const TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)
+                          : _kLinkStyle,
+                    ),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: _kSpacing),
 
+            _selectedSection == 0 ? _buildDiscoverClubs() : _buildMyClubs(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDiscoverClubs() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Clubs recomendados',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: _kSpacing),
+        
+        Container(
+          padding: const EdgeInsets.all(_kSpacing),
+          decoration: BoxDecoration(
+            color: _kBlockColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Text(
+              'No se encontraron clubs',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMyClubs() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Mis clubs activos',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        const SizedBox(height: _kSpacing),
+        
+        Container(
+          padding: const EdgeInsets.all(_kSpacing),
+          decoration: BoxDecoration(
+            color: _kBlockColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Text(
+              'No tienes clubs activos',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
