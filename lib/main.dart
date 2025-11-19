@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'buscar.dart'; 
 import 'clubs.dart'; 
 import 'perfil.dart';
+import 'auth_screen.dart';
 
 const Color _kBlockColor = Color(0xFFE0E0E0);
 const TextStyle _kLinkStyle = TextStyle(fontSize: 18, color: Colors.black54);
@@ -36,7 +37,8 @@ class BookWormApp extends StatelessWidget {
         ),
       ),
       routes: {
-        '/': (context) => const BookWormHomePage(),
+        '/': (context) => const AuthScreen(),
+        '/home': (context) => const BookWormHomePage(),
         '/search': (context) => const Buscar(),
         '/clubs': (context) => const Clubs(), 
         '/perfil': (context) => const Perfil(), 

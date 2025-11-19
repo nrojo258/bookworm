@@ -16,10 +16,179 @@ class _ClubsState extends State<Clubs> {
   final TextEditingController _searchController = TextEditingController();
   int _selectedSection = 0; 
   
+  final List<String> _generos = [
+    'Ficción',
+    'Thriller',
+    'Ciencia Ficción',
+    'Biografía',
+    'Romance',
+    'Fantasía',
+    'Misterio',
+    'Histórica',
+    'Aventura',
+    'Terror',
+    'Desarrollo Personal',
+    'Poesía',
+    'Ensayo',
+    'Infantil',
+    'Juvenil'
+  ];
+  String? _generoSeleccionado;
+  
   @override
   void dispose(){
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _mostrarDialogoCrearClub() {
+    final TextEditingController _nombreController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text(
+                'Crear Nuevo Club',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Completa la información',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    TextFormField(
+                      controller: _nombreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del club',
+                        hintText: 'Ej: Club de Lectura de Ciencia Ficción',
+                        border: OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.purple),
+                        ),
+                        prefixIcon: Icon(Icons.group, color: Colors.purple),
+                      ),
+                      maxLength: 50,
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    const Text(
+                      'Género del club',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _generoSeleccionado,
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        hint: const Text(
+                          'Selecciona un género',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        dropdownColor: Colors.white,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        
+                        items: _generos.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _generoSeleccionado = newValue;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _generoSeleccionado == null 
+                          ? 'Selecciona el género principal del club'
+                          : 'Género seleccionado: $_generoSeleccionado',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _generoSeleccionado == null ? Colors.orange : Colors.green,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _nombreController.text.isEmpty || _generoSeleccionado == null
+                      ? null
+                      : () {
+                          _crearClub(_nombreController.text, _generoSeleccionado!);
+                          Navigator.of(context).pop();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Crear Club'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _crearClub(String nombre, String genero) {
+    print('Creando club: $nombre - Género: $genero');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Club "$nombre" creado exitosamente'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    
+    setState(() {
+      _generoSeleccionado = null;
+    });
   }
 
   @override
@@ -66,7 +235,7 @@ class _ClubsState extends State<Clubs> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: TextButton(
-                    onPressed: (){},
+                    onPressed: _mostrarDialogoCrearClub, // Cambiado aquí
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
