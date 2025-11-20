@@ -41,7 +41,7 @@ class _ClubsState extends State<Clubs> {
     super.dispose();
   }
 
-  void _mostrarDialogoCrearClub() {
+  void _mostrarCrearClub() {
     final TextEditingController _nombreController = TextEditingController();
     
     showDialog(
@@ -235,7 +235,7 @@ class _ClubsState extends State<Clubs> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: TextButton(
-                    onPressed: _mostrarDialogoCrearClub, // Cambiado aquí
+                    onPressed: _mostrarCrearClub, 
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
