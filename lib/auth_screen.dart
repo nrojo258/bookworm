@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-const Color _kPrimaryColor = Color(0xFF7E57C2);
-const Color _kSecondaryColor = Color(0xFF26A69A);
+import 'app_constants.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -13,18 +11,18 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _nameController = TextEditingController();
   
   bool _isLogin = true;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
   
   @override
   void dispose() {
@@ -43,63 +41,55 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showErrorSnackBar('Por favor, completa todos los campos');
-      return;
-    }
-
-    if (!_isLogin && _nameController.text.isEmpty) {
-      _showErrorSnackBar('Por favor, ingresa tu nombre');
-      return;
-    }
-
-    if (!_isLogin && _passwordController.text != _confirmPasswordController.text) {
-      _showErrorSnackBar('Las contraseñas no coinciden');
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      _showErrorSnackBar('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_validateForm()) return;
+    setState(() => _isLoading = true);
 
     try {
-      if (_isLogin) {
-        await _loginUser();
-      } else {
-        await _registerUser();
-      }
+      _isLogin ? await _loginUser() : await _registerUser();
     } on FirebaseAuthException catch (e) {
       _handleFirebaseError(e);
     } catch (e) {
-      _showErrorSnackBar('Error inesperado: $e');
+      _showSnackBar('Error inesperado: $e', Colors.red);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  bool _validateForm() {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Completa todos los campos', Colors.red);
+      return false;
+    }
+    if (!_isLogin) {
+      if (_nameController.text.isEmpty) {
+        _showSnackBar('Ingresa tu nombre', Colors.red);
+        return false;
+      }
+      if (_passwordController.text != _confirmPasswordController.text) {
+        _showSnackBar('Las contraseñas no coinciden', Colors.red);
+        return false;
+      }
+    }
+    if (_passwordController.text.length < 6) {
+      _showSnackBar('La contraseña debe tener al menos 6 caracteres', Colors.red);
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _loginUser() async {
-    final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+    final userCredential = await _auth.signInWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
-
     if (userCredential.user != null) {
-      _showSuccessSnackBar('¡Bienvenido de vuelta!');
+      _showSnackBar('¡Bienvenido de vuelta!', Colors.green);
       _navigateToHome();
     }
   }
 
   Future<void> _registerUser() async {
-    final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+    final userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
@@ -109,78 +99,58 @@ class _AuthScreenState extends State<AuthScreen> {
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
-        'preferences': {
-          'genres': [],
-          'formats': []
-        },
-        'stats': {
-          'booksRead': 0,
-          'readingTime': 0,
-          'currentStreak': 0
-        }
+        'preferences': {'genres': [], 'formats': []},
+        'stats': {'booksRead': 0, 'readingTime': 0, 'currentStreak': 0}
       });
-
-      _showSuccessSnackBar('¡Cuenta creada exitosamente!');
+      _showSnackBar('¡Cuenta creada!', Colors.green);
       _navigateToHome();
     }
   }
 
   void _handleFirebaseError(FirebaseAuthException e) {
-    String errorMessage;
+    final errorMessages = {
+      'user-not-found': 'No existe una cuenta con este email',
+      'wrong-password': 'Contraseña incorrecta',
+      'email-already-in-use': 'Ya existe una cuenta con este email',
+      'weak-password': 'La contraseña es demasiado débil',
+      'invalid-email': 'El formato del email no es válido',
+      'network-request-failed': 'Error de conexión',
+      'too-many-requests': 'Demasiados intentos. Intenta más tarde',
+    };
     
-    switch (e.code) {
-      case 'user-not-found':
-        errorMessage = 'No existe una cuenta con este email';
-        break;
-      case 'wrong-password':
-        errorMessage = 'Contraseña incorrecta';
-        break;
-      case 'email-already-in-use':
-        errorMessage = 'Ya existe una cuenta con este email';
-        break;
-      case 'weak-password':
-        errorMessage = 'La contraseña es demasiado débil';
-        break;
-      case 'invalid-email':
-        errorMessage = 'El formato del email no es válido';
-        break;
-      case 'network-request-failed':
-        errorMessage = 'Error de conexión. Verifica tu internet';
-        break;
-      case 'too-many-requests':
-        errorMessage = 'Demasiados intentos. Intenta más tarde';
-        break;
-      default:
-        errorMessage = 'Error: ${e.message ?? "Desconocido"}';
-    }
-    
-    _showErrorSnackBar(errorMessage);
+    _showSnackBar(errorMessages[e.code] ?? 'Error: ${e.message}', Colors.red);
   }
 
-  void _showErrorSnackBar(String message) {
+  void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: color == Colors.green ? 2 : 3),
       ),
     );
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  void _navigateToHome() {Navigator.pushReplacementNamed(context, '/');}
 
-  void _navigateToHome() {
-    Navigator.pushReplacementNamed(context, '/home');
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, 
+                        {bool obscureText = false, VoidCallback? onToggleVisibility}) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: AppColors.primary),
+        suffixIcon: onToggleVisibility != null ? IconButton(
+          icon: Icon(obscureText ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
+          onPressed: onToggleVisibility,
+        ) : null,
+        border: const OutlineInputBorder(),
+        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+      ),
+      obscureText: obscureText,
+      enabled: !_isLoading,
+    );
   }
 
   @override
@@ -189,7 +159,7 @@ class _AuthScreenState extends State<AuthScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [_kPrimaryColor, _kSecondaryColor],
+            colors: [AppColors.primary, AppColors.secondary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -198,242 +168,100 @@ class _AuthScreenState extends State<AuthScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 400, 
+                  width: 400,
                   padding: const EdgeInsets.all(30),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))],
                   ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const CircleAvatar(
                         radius: 50,
-                        backgroundColor: _kPrimaryColor,
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          size: 50,
-                          color: Colors.white,
-                        ),
+                        backgroundColor: AppColors.primary,
+                        child: Icon(Icons.menu_book_rounded, size: 50, color: Colors.white),
                       ),
                       const SizedBox(height: 20),
-                      
-                      Text(
-                        _isLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      Text(_isLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: AppStyles.titleMedium),
                       const SizedBox(height: 10),
-                      
                       Text(
-                        _isLogin ? 'Bienvenido de vuelta a BookWorm' : 'Únete a nuestra comunidad de lectores',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
+                        _isLogin ? 'Bienvenido de vuelta' : 'Únete a nuestra comunidad',
+                        style: AppStyles.bodyMedium,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 30),
                       
-                      if (!_isLogin)
-                        Column(
-                          children: [
-                            TextFormField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nombre',
-                                prefixIcon: Icon(Icons.person, color: _kPrimaryColor),
-                                border: OutlineInputBorder(),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: _kPrimaryColor),
-                                ),
-                              ),
-                              keyboardType: TextInputType.name,
-                              enabled: !_isLoading,
-                            ),
-                            const SizedBox(height: 15),
-                          ],
-                        ),
+                      if (!_isLogin) ...[
+                        _buildTextField(_nameController, 'Nombre', Icons.person),
+                        const SizedBox(height: 15),
+                      ],
                       
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Correo electrónico',
-                          prefixIcon: Icon(Icons.email, color: _kPrimaryColor),
-                          border: OutlineInputBorder(),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: _kPrimaryColor),
-                          ),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        enabled: !_isLoading,
-                      ),
+                      _buildTextField(_emailController, 'Correo electrónico', Icons.email),
                       const SizedBox(height: 15),
                       
-                      TextFormField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          prefixIcon: const Icon(Icons.lock, color: _kPrimaryColor),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.grey,
-                            ),
-                            onPressed: _isLoading ? null : () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          border: const OutlineInputBorder(),
-                          focusedBorder: const OutlineInputBorder(
-                            borderSide: BorderSide(color: _kPrimaryColor),
-                          ),
-                        ),
+                      _buildTextField(_passwordController, 'Contraseña', Icons.lock,
                         obscureText: _obscurePassword,
-                        enabled: !_isLoading,
+                        onToggleVisibility: _isLoading ? null : () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                       const SizedBox(height: 15),
                       
-                      if (!_isLogin)
-                        Column(
-                          children: [
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              decoration: InputDecoration(
-                                labelText: 'Confirmar contraseña',
-                                prefixIcon: const Icon(Icons.lock_outline, color: _kPrimaryColor),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: _isLoading ? null : () {
-                                    setState(() {
-                                      _obscureConfirmPassword = !_obscureConfirmPassword;
-                                    });
-                                  },
-                                ),
-                                border: const OutlineInputBorder(),
-                                focusedBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: _kPrimaryColor),
-                                ),
-                              ),
-                              obscureText: _obscureConfirmPassword,
-                              enabled: !_isLoading,
-                            ),
-                            const SizedBox(height: 15),
-                          ],
+                      if (!_isLogin) ...[
+                        _buildTextField(_confirmPasswordController, 'Confirmar contraseña', Icons.lock_outline,
+                          obscureText: _obscureConfirmPassword,
+                          onToggleVisibility: _isLoading ? null : () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                         ),
+                        const SizedBox(height: 15),
+                      ],
                       
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: _isLoading
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(_kPrimaryColor),
-                                ),
-                              )
+                            ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
                             : ElevatedButton(
                                 onPressed: _submitForm,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _kPrimaryColor,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 5,
-                                ),
-                                child: Text(
-                                  _isLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                style: AppStyles.primaryButton,
+                                child: Text(_isLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               ),
                       ),
-                      const SizedBox(height: 20),
-                      
-                      if (!_isLoading) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                color: Colors.grey[300],
-                                thickness: 1,
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                'O',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(
-                                color: Colors.grey[300],
-                                thickness: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            GestureDetector(
-                              onTap: _isLoading ? null : _toggleAuthMode,
-                              child: Text(
-                                _isLogin ? 'Regístrate' : 'Inicia Sesión',
-                                style: TextStyle(
-                                  color: _kPrimaryColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      if (!_isLoading) ..._buildAuthFooter(),
                     ],
                   ),
                 ),
-                const SizedBox(height: 50),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildAuthFooter() {
+    return [
+      const SizedBox(height: 20),
+      const Row(children: [
+        Expanded(child: Divider(color: Colors.grey)),
+        Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('O', style: TextStyle(color: Colors.grey))),
+        Expanded(child: Divider(color: Colors.grey)),
+      ]),
+      const SizedBox(height: 20),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(_isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?', style: AppStyles.bodyMedium),
+          const SizedBox(width: 5),
+          GestureDetector(
+            onTap: _isLoading ? null : _toggleAuthMode,
+            child: Text(
+              _isLogin ? 'Regístrate' : 'Inicia Sesión',
+              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 }

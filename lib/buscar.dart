@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
-const Color _kPrimaryColor = Color(0xFF7E57C2);
-const Color _kSecondaryColor = Color(0xFF26A69A);
-const Color _kBackgroundColor = Color(0xFFF8F9FA);
+import 'app_constants.dart';
+import 'app_components.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
@@ -13,204 +11,62 @@ class Buscar extends StatefulWidget {
 
 class _BuscarState extends State<Buscar> {
   final TextEditingController _searchController = TextEditingController();
-
-  final List<String> formatos = ['Todos los formatos', 'Libro físico', 'Audiolibro'];
-  String? formatoSeleccionado = 'Todos los formatos'; 
-
-  final List<String> generos = ['Todos los géneros', 'Ficción', 'Thriller', 'Ciencia Ficción', 'Biografía'];
-  String? generoSeleccionado = 'Todos los géneros'; 
+  String? formatoSeleccionado = 'Todos los formatos';
+  String? generoSeleccionado = 'Todos los géneros';
 
   @override
-  void dispose(){
+  void dispose() {
     _searchController.dispose();
     super.dispose();
   }
   
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'BookWorm',
-          style: TextStyle(
-            fontSize: 24, 
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: _kPrimaryColor,
-
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: <Widget>[
-          _buildAppBarButton('Buscar', () {}, isActive: true),
-          _buildAppBarButton('Clubs', () => Navigator.popAndPushNamed(context, '/clubs')),
-          _buildAppBarButton('Perfil', () => Navigator.popAndPushNamed(context, '/perfil')),
-          const SizedBox(width: 16),
-        ],
+        title: const Text('BookWorm', style: AppStyles.titleLarge),
+        backgroundColor: AppColors.primary,
+        actions: const [AppBarButtons(currentRoute: '/search')],
       ),
       
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
+          children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              
+              decoration: AppStyles.cardDecoration,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Encuentra tu próximo libro',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  const Text('Encuentra tu próximo libro', style: AppStyles.titleMedium),
                   const SizedBox(height: 8),
-
-                  const Text(
-                    'Busca entre miles de libros y audiolibros',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
+                  const Text('Busca entre miles de libros y audiolibros', style: AppStyles.bodyMedium),
                   const SizedBox(height: 20),
                   
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: _kBackgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-
-                          child: Center( 
-                            child: TextField(
-                              controller: _searchController, 
-                              decoration: const InputDecoration(
-                                hintText: 'Buscar libros o audiolibros...', 
-                                hintStyle: TextStyle(fontSize: 16, color: Colors.black54),
-                                border: InputBorder.none, 
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16), 
-                                prefixIcon: Icon(Icons.search, color: _kPrimaryColor),
-                              ),
-                              style: const TextStyle(fontSize: 16, color: Colors.black),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      Container(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kPrimaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 3,
-                          ),
-
-                          child: const Text(
-                            'Buscar',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  CustomSearchBar(
+                    controller: _searchController,
+                    hintText: 'Buscar libros o audiolibros...',
+                    onSearch: () {},
                   ),
                   const SizedBox(height: 20),
 
                   Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: _kBackgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: formatoSeleccionado,
-                              isExpanded: true,
-                              dropdownColor: Colors.white,
-                              style: const TextStyle(color: Colors.black, fontSize: 16),
-                              icon: const Icon(Icons.arrow_drop_down, color: _kPrimaryColor),
-                              items: formatos.map<DropdownMenuItem<String>>((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  formatoSeleccionado = newValue;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
+                    children: [
+                      Expanded(child: DropdownFilter(
+                        value: formatoSeleccionado,
+                        items: const ['Todos los formatos', 'Libro físico', 'Audiolibro'],
+                        hint: 'Formato',
+                        onChanged: (value) => setState(() => formatoSeleccionado = value),
+                      )),
                       const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: _kBackgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: generoSeleccionado,
-                              isExpanded: true,
-                              dropdownColor: Colors.white,
-                              style: const TextStyle(color: Colors.black, fontSize: 16),
-                              icon: const Icon(Icons.arrow_drop_down, color: _kPrimaryColor),
-                              items: generos.map<DropdownMenuItem<String>>((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  generoSeleccionado = newValue;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
+                      Expanded(child: DropdownFilter(
+                        value: generoSeleccionado,
+                        items: AppData.generos,
+                        hint: 'Género',
+                        onChanged: (value) => setState(() => generoSeleccionado = value),
+                      )),
                     ],
                   ),
                 ],
@@ -220,58 +76,22 @@ class _BuscarState extends State<Buscar> {
 
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              decoration: AppStyles.cardDecoration,
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Resultados de búsqueda',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  Text('Resultados de búsqueda', style: AppStyles.titleMedium),
                   SizedBox(height: 16),
                   Center(
                     child: Text(
-                      'Ingresa términos de búsqueda para encontrar libros',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
+                      'Ingresa términos de búsqueda para encontrar libros', 
+                      style: AppStyles.bodyMedium
                     ),
                   ),
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBarButton(String text, VoidCallback onPressed, {bool isActive = false}) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: isActive ? Colors.white : Colors.white70,
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         ),
       ),
     );

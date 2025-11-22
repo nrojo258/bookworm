@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
-const Color _kPrimaryColor = Color(0xFF7E57C2);
-const Color _kSecondaryColor = Color(0xFF26A69A);
-const Color _kBackgroundColor = Color(0xFFF8F9FA);
+import 'app_constants.dart';
+import 'app_components.dart';
 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
@@ -12,213 +10,25 @@ class Perfil extends StatefulWidget {
 }
 
 class _PerfilState extends State<Perfil> {
-  int _selectedSection = 0; 
-  
+  int _selectedSection = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'BookWorm',
-          style: TextStyle(
-            fontSize: 24, 
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: _kPrimaryColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: <Widget>[
-          _buildAppBarButton('Buscar', () => Navigator.popAndPushNamed(context, '/search')),
-          _buildAppBarButton('Clubs', () => Navigator.popAndPushNamed(context, '/clubs')),
-          _buildAppBarButton('Perfil', () {}, isActive: true),
-          const SizedBox(width: 16),
-        ],
+        title: const Text('BookWorm', style: AppStyles.titleLarge),
+        backgroundColor: AppColors.primary,
+        actions: const [AppBarButtons(currentRoute: '/perfil')],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      const Text(
-                        'Mi Perfil',
-                        style: TextStyle(
-                          fontSize: 24, 
-                          fontWeight: FontWeight.bold, 
-                          color: Colors.black87
-                        )
-                      ),
-                      ElevatedButton(
-                        onPressed: (){},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kPrimaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit, size: 16),
-                            SizedBox(width: 6),
-                            Text(
-                              'Editar perfil',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  Row(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _kPrimaryColor.withOpacity(0.1),
-                          border: Border.all(
-                            color: _kPrimaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          size: 40,
-                          color: _kPrimaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Nombre del usuario',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'email@ejemplo.com',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _kSecondaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Lector activo',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _kSecondaryColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          children: [
+            _buildProfileHeader(),
             const SizedBox(height: 20),
-          
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: _buildSectionButton(
-                          'Información',
-                          0,
-                          Icons.person_outline,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildSectionButton(
-                          'Mi Progreso',
-                          1,
-                          Icons.trending_up,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildSectionButton(
-                          'Estadísticas',
-                          2,
-                          Icons.analytics,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildSectionButton(
-                          'Configuración',
-                          3,
-                          Icons.settings,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildSectionSelector(),
             const SizedBox(height: 20),
-        
             _buildSectionContent(),
           ],
         ),
@@ -226,99 +36,106 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildAppBarButton(String text, VoidCallback onPressed, {bool isActive = false}) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: isActive ? Colors.white : Colors.white70,
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionButton(String text, int sectionIndex, IconData icon) {
-    return ElevatedButton(
-      onPressed: () {
-        setState(() {
-          _selectedSection = sectionIndex;
-        });
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _selectedSection == sectionIndex ? _kPrimaryColor : Colors.transparent,
-        foregroundColor: _selectedSection == sectionIndex ? Colors.white : _kPrimaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: _selectedSection == sectionIndex ? _kPrimaryColor : Colors.grey.shade300,
-          ),
-        ),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: AppStyles.cardDecoration,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Mi Perfil', style: AppStyles.titleMedium),
+              ElevatedButton(
+                onPressed: () {},
+                style: AppStyles.primaryButton,
+                child: const Row(children: [
+                  Icon(Icons.edit, size: 16),
+                  SizedBox(width: 6),
+                  Text('Editar perfil', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.1),
+                  border: Border.all(color: AppColors.primary, width: 2),
+                ),
+                child: const Icon(Icons.person, size: 40, color: AppColors.primary),
+              ),
+              const SizedBox(width: 20),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Nombre del usuario', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text('email@ejemplo.com', style: AppStyles.bodyMedium),
+                    SizedBox(height: 8),
+                    Text(
+                      'Lector activo', 
+                      style: TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.w500)
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  Widget _buildSectionSelector() {
+    final sections = [
+      {'text': 'Información', 'icon': Icons.person_outline},
+      {'text': 'Mi Progreso', 'icon': Icons.trending_up},
+      {'text': 'Estadísticas', 'icon': Icons.analytics},
+      {'text': 'Configuración', 'icon': Icons.settings},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: AppStyles.cardDecoration,
+      child: Row(children: [
+        for (int i = 0; i < sections.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: SectionButton(
+            text: sections[i]['text'] as String,
+            isSelected: _selectedSection == i,
+            icon: sections[i]['icon'] as IconData,
+            onPressed: () => setState(() => _selectedSection = i),
+          )),
+        ],
+      ]),
+    );
+  }
+
   Widget _buildSectionContent() {
-    switch (_selectedSection) {
-      case 0: 
-        return _buildInformacionSection();
-      case 1: 
-        return _buildProgresoSection();
-      case 2: 
-        return _buildEstadisticasSection();
-      case 3: 
-        return _buildConfiguracionSection();
-      default:
-        return _buildInformacionSection();
-    }
+    final sections = [
+      _buildInformacionSection(),
+      _buildProgresoSection(),
+      _buildEstadisticasSection(),
+      _buildConfiguracionSection(),
+    ];
+    return sections[_selectedSection];
   }
 
   Widget _buildInformacionSection() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppStyles.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Información Personal',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          const Text('Información Personal', style: AppStyles.titleMedium),
           const SizedBox(height: 20),
           
           _buildInfoCard(
@@ -338,11 +155,7 @@ class _PerfilState extends State<Perfil> {
             [
               const Text(
                 'Completa tu biografía para que otros lectores te conozcan mejor.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
               ),
             ],
             Icons.description,
@@ -369,7 +182,7 @@ class _PerfilState extends State<Perfil> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kBackgroundColor,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -378,15 +191,11 @@ class _PerfilState extends State<Perfil> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: _kPrimaryColor),
+              Icon(icon, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
             ],
           ),
@@ -407,11 +216,7 @@ class _PerfilState extends State<Perfil> {
             flex: 2,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54),
             ),
           ),
           Expanded(
@@ -440,11 +245,7 @@ class _PerfilState extends State<Perfil> {
             flex: 2,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54),
             ),
           ),
           Expanded(
@@ -466,53 +267,23 @@ class _PerfilState extends State<Perfil> {
   Widget _buildProgresoSection() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppStyles.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Mi Progreso de Lectura',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+              const Text('Mi Progreso de Lectura', style: AppStyles.titleMedium),
               ElevatedButton(
-                onPressed: (){},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kPrimaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
+                onPressed: () {},
+                style: AppStyles.primaryButton,
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.add, size: 16),
                     SizedBox(width: 6),
-                    Text(
-                      'Añadir libros',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Añadir libros', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -524,7 +295,7 @@ class _PerfilState extends State<Perfil> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [_kPrimaryColor.withOpacity(0.8), _kSecondaryColor],
+                colors: [AppColors.primary.withOpacity(0.8), AppColors.secondary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -573,18 +344,11 @@ class _PerfilState extends State<Perfil> {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
-          ),
+          style: const TextStyle(fontSize: 12, color: Colors.white70),
         ),
       ],
     );
@@ -594,7 +358,7 @@ class _PerfilState extends State<Perfil> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kBackgroundColor,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -603,10 +367,10 @@ class _PerfilState extends State<Perfil> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _kPrimaryColor.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: _kPrimaryColor),
+            child: Icon(icon, size: 20, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -615,19 +379,12 @@ class _PerfilState extends State<Perfil> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
             ),
@@ -635,16 +392,12 @@ class _PerfilState extends State<Perfil> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _kSecondaryColor.withOpacity(0.1),
+              color: AppColors.secondary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               status,
-              style: TextStyle(
-                fontSize: 12,
-                color: _kSecondaryColor,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -655,35 +408,18 @@ class _PerfilState extends State<Perfil> {
   Widget _buildEstadisticasSection() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppStyles.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Estadísticas de Lectura',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          const Text('Estadísticas de Lectura', style: AppStyles.titleMedium),
           const SizedBox(height: 20),
           
           Container(
             height: 200,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: _kBackgroundColor,
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade300),
             ),
@@ -693,20 +429,8 @@ class _PerfilState extends State<Perfil> {
                 children: [
                   Icon(Icons.bar_chart, size: 48, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text(
-                    'Gráfico de progreso mensual',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  Text(
-                    'Los datos se mostrarán aquí',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  Text('Gráfico de progreso mensual', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  Text('Los datos se mostrarán aquí', style: TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             ),
@@ -715,26 +439,18 @@ class _PerfilState extends State<Perfil> {
           
           Row(
             children: [
-              Expanded(
-                child: _buildStatCard('Géneros más leídos', 'No hay datos', Icons.category),
-              ),
+              Expanded(child: _buildStatCard('Géneros más leídos', 'No hay datos', Icons.category)),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('Tiempo promedio', 'No hay datos', Icons.timer),
-              ),
+              Expanded(child: _buildStatCard('Tiempo promedio', 'No hay datos', Icons.timer)),
             ],
           ),
           const SizedBox(height: 12),
           
           Row(
             children: [
-              Expanded(
-                child: _buildStatCard('Libros por mes', 'No hay datos', Icons.trending_up),
-              ),
+              Expanded(child: _buildStatCard('Libros por mes', 'No hay datos', Icons.trending_up)),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('Páginas por día', 'No hay datos', Icons.menu_book),
-              ),
+              Expanded(child: _buildStatCard('Páginas por día', 'No hay datos', Icons.menu_book)),
             ],
           ),
         ],
@@ -746,32 +462,18 @@ class _PerfilState extends State<Perfil> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kBackgroundColor,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 24, color: _kPrimaryColor),
+          Icon(icon, size: 24, color: AppColors.primary),
           const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(title, style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(value, style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -780,66 +482,19 @@ class _PerfilState extends State<Perfil> {
   Widget _buildConfiguracionSection() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppStyles.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Configuración',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          const Text('Configuración', style: AppStyles.titleMedium),
           const SizedBox(height: 20),
           
-          _buildSettingItem(
-            'Notificaciones',
-            'Gestiona las notificaciones de la app',
-            Icons.notifications,
-            true,
-          ),
-          _buildSettingItem(
-            'Privacidad',
-            'Controla tu información personal',
-            Icons.privacy_tip,
-            false,
-          ),
-          _buildSettingItem(
-            'Idioma',
-            'Español',
-            Icons.language,
-            false,
-          ),
-          _buildSettingItem(
-            'Tema',
-            'Claro',
-            Icons.palette,
-            false,
-          ),
-          _buildSettingItem(
-            'Sincronización',
-            'Última sincronización: hoy',
-            Icons.sync,
-            false,
-          ),
-          _buildSettingItem(
-            'Ayuda y soporte',
-            'Centro de ayuda y contacto',
-            Icons.help,
-            false,
-          ),
+          _buildSettingItem('Notificaciones', 'Gestiona las notificaciones de la app', Icons.notifications, true),
+          _buildSettingItem('Privacidad', 'Controla tu información personal', Icons.privacy_tip, false),
+          _buildSettingItem('Idioma', 'Español', Icons.language, false),
+          _buildSettingItem('Tema', 'Claro', Icons.palette, false),
+          _buildSettingItem('Sincronización', 'Última sincronización: hoy', Icons.sync, false),
+          _buildSettingItem('Ayuda y soporte', 'Centro de ayuda y contacto', Icons.help, false),
           const SizedBox(height: 20),
           
           Container(
@@ -852,17 +507,7 @@ class _PerfilState extends State<Perfil> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Cuenta',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
+              children: [                
                 Row(
                   children: [
                     Expanded(
@@ -871,9 +516,7 @@ class _PerfilState extends State<Perfil> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: const Text('Cerrar sesión'),
                       ),
@@ -885,9 +528,7 @@ class _PerfilState extends State<Perfil> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: const Text('Eliminar cuenta'),
                       ),
@@ -906,44 +547,26 @@ class _PerfilState extends State<Perfil> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _kPrimaryColor.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: _kPrimaryColor),
+            child: Icon(icon, size: 20, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
-                ),
+                Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.black54)),
               ],
             ),
           ),
@@ -951,7 +574,7 @@ class _PerfilState extends State<Perfil> {
             Switch(
               value: true,
               onChanged: (value) {},
-              activeColor: _kPrimaryColor,
+              activeColor: AppColors.primary,
             )
           else
             const Icon(Icons.chevron_right, color: Colors.grey),

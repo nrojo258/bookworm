@@ -2,19 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'auth_screen.dart';
-import 'buscar.dart'; 
-import 'clubs.dart'; 
+import 'buscar.dart';
+import 'clubs.dart';
 import 'perfil.dart';
-
-const Color _kPrimaryColor = Color(0xFF7E57C2);
-const Color _kSecondaryColor = Color(0xFF26A69A);
-const Color _kBackgroundColor = Color(0xFFF8F9FA);
+import 'app_constants.dart';
+import 'app_components.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const BookWormApp());
 }
 
@@ -25,51 +21,24 @@ class BookWormApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BookWorm',
-      debugShowCheckedModeBanner: false, 
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: _kPrimaryColor,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _kPrimaryColor,
-          primary: _kPrimaryColor,
-          secondary: _kSecondaryColor,
-        ),
-        scaffoldBackgroundColor: _kBackgroundColor,
+        primaryColor: AppColors.primary,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: _kPrimaryColor,
+          backgroundColor: AppColors.primary, 
           foregroundColor: Colors.white,
           elevation: 0,
-          centerTitle: false,
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _kPrimaryColor,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 3,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade400),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _kPrimaryColor, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(style: AppStyles.primaryButton),
       ),
       routes: {
         '/': (context) => const AuthScreen(),
         '/home': (context) => const BookWormHomePage(),
         '/search': (context) => const Buscar(),
-        '/clubs': (context) => const Clubs(), 
-        '/perfil': (context) => const Perfil(), 
+        '/clubs': (context) => const Clubs(),
+        '/perfil': (context) => const Perfil(),
       },
       initialRoute: '/',
     );
@@ -83,20 +52,8 @@ class BookWormHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'BookWorm',
-          style: TextStyle(
-            fontSize: 24, 
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        actions: <Widget>[
-          _buildAppBarButton('Buscar', () => Navigator.pushNamed(context, '/search')),
-          _buildAppBarButton('Clubs', () => Navigator.pushNamed(context, '/clubs')),
-          _buildAppBarButton('Perfil', () => Navigator.pushNamed(context, '/perfil')),
-          const SizedBox(width: 16),
-        ],
+        title: const Text('BookWorm', style: AppStyles.titleLarge),
+        actions: const [AppBarButtons(currentRoute: '/home')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -107,7 +64,7 @@ class BookWormHomePage extends StatelessWidget {
               height: 180,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [_kPrimaryColor, _kSecondaryColor],
+                  colors: [AppColors.primary, AppColors.secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -156,7 +113,7 @@ class BookWormHomePage extends StatelessWidget {
                             _buildBannerButton(
                               'Ver progreso', 
                               Icons.trending_up, 
-                              () {}
+                              () => Navigator.pushNamed(context, '/perfil')
                             ),
                           ],
                         ),
@@ -175,27 +132,13 @@ class BookWormHomePage extends StatelessWidget {
             
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              decoration: AppStyles.cardDecoration,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Acceso rápido',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                    style: AppStyles.titleMedium,
                   ),
                   const SizedBox(height: 16),
                   GridView.builder(
@@ -218,7 +161,7 @@ class BookWormHomePage extends StatelessWidget {
                       
                       return Container(
                         decoration: BoxDecoration(
-                          color: _kBackgroundColor,
+                          color: AppColors.background,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
@@ -228,7 +171,7 @@ class BookWormHomePage extends StatelessWidget {
                             Icon(
                               quickActions[index]['icon'],
                               size: 32,
-                              color: _kPrimaryColor,
+                              color: AppColors.primary,
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -258,17 +201,7 @@ class BookWormHomePage extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                    decoration: AppStyles.cardDecoration,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -302,17 +235,7 @@ class BookWormHomePage extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                    decoration: AppStyles.cardDecoration,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -348,49 +271,33 @@ class BookWormHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBarButton(String text, VoidCallback onPressed) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white,
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
   Widget _buildBannerButton(String text, IconData icon, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.2),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  return ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white.withOpacity(0.2),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.white.withOpacity(0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
   }
 }
