@@ -145,7 +145,6 @@ class _PerfilState extends State<Perfil> {
               _buildInfoItem('Nombre completo', ''),
               _buildInfoItem('Email', ''),
               _buildInfoItem('Fecha de registro', ''),
-              _buildInfoItem('Ubicación', ''),
             ],
             Icons.person,
           ),

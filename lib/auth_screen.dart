@@ -142,7 +142,7 @@ class _AuthScreenState extends State<AuthScreen> {
         labelText: label,
         prefixIcon: Icon(icon, color: AppColors.primary),
         suffixIcon: onToggleVisibility != null ? IconButton(
-          icon: Icon(obscureText ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
+          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
           onPressed: onToggleVisibility,
         ) : null,
         border: const OutlineInputBorder(),
