@@ -5,8 +5,8 @@ import 'auth_screen.dart';
 import 'buscar.dart';
 import 'clubs.dart';
 import 'perfil.dart';
-import 'app_constants.dart';
-import 'app_components.dart';
+import 'diseño.dart';
+import 'componentes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
