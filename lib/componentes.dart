@@ -12,41 +12,64 @@ class AppBarButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final routes = {
-      'Home': '/home', 
-      'Buscar': '/search',
-      'Clubs': '/clubs', 
-      'Perfil': '/perfil',
+      'Home': {'route': '/home', 'icon': Icons.home},
+      'Buscar': {'route': '/search', 'icon': Icons.search},
+      'Clubs': {'route': '/clubs', 'icon': Icons.group},
+      'Perfil': {'route': '/perfil', 'icon': Icons.person},
     };
 
     return Row(children: [
-      ...routes.entries.map((e) => _buildAppBarButton(context, e.key, e.value)),
-      const SizedBox(width: 16),
+      ...routes.entries.map((e) => _buildAppBarButton(
+        context, 
+        e.key, 
+        e.value['route'] as String, 
+        e.value['icon'] as IconData
+      )),
+      const SizedBox(width: 8), 
     ]);
   }
 
-  Widget _buildAppBarButton(BuildContext context, String text, String route) {
+  Widget _buildAppBarButton(BuildContext context, String text, String route, IconData icon) {
     final isActive = currentRoute == route;
-    return TextButton(
-      onPressed: () {
-        if (ModalRoute.of(context)?.settings.name != route) {
-          Navigator.pushReplacementNamed(context, route);
-        }
-      },
-      style: TextButton.styleFrom(
-        foregroundColor: isActive ? Colors.white : Colors.white70,
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: TextButton(
+        onPressed: () {
+          if (ModalRoute.of(context)?.settings.name != route) {
+            Navigator.pushReplacementNamed(context, route);
+          }
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: isActive ? Colors.white : Colors.white70,
+          backgroundColor: isActive ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isActive ? Colors.white : Colors.white70,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ... el resto del código de componentes.dart se mantiene igual
 class SectionButton extends StatelessWidget {
   final String text;
   final bool isSelected;
