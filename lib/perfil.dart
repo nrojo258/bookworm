@@ -19,6 +19,7 @@ class _PerfilState extends State<Perfil> {
       appBar: AppBar(
         title: const Text('BookWorm', style: AppStyles.titleLarge),
         backgroundColor: AppColors.primary,
+        automaticallyImplyLeading: false,
         actions: const [AppBarButtons(currentRoute: '/perfil')],
       ),
       body: SingleChildScrollView(

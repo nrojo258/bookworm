@@ -94,6 +94,7 @@ class _ClubsState extends State<Clubs> {
       appBar: AppBar(
         title: const Text('BookWorm', style: AppStyles.titleLarge),
         backgroundColor: AppColors.primary,
+        automaticallyImplyLeading: false,
         actions: const [AppBarButtons(currentRoute: '/clubs')],
       ),
       body: SingleChildScrollView(

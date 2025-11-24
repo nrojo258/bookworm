@@ -33,6 +33,7 @@ class _BuscarState extends State<Buscar> {
       appBar: AppBar(
         title: const Text('BookWorm', style: AppStyles.titleLarge),
         backgroundColor: AppColors.primary,
+        automaticallyImplyLeading: false,
         actions: const [AppBarButtons(currentRoute: '/search')],
       ),
       

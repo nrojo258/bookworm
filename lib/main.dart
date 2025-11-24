@@ -52,7 +52,12 @@ class BookWormHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BookWorm', style: AppStyles.titleLarge),
+        title: GestureDetector(
+          onTap: () {
+            Navigator.pushReplacementNamed(context, '/home');
+          },
+          child: const Text('BookWorm', style: AppStyles.titleLarge),
+        ),
         actions: const [AppBarButtons(currentRoute: '/home')],
       ),
       body: SingleChildScrollView(
@@ -272,32 +277,32 @@ class BookWormHomePage extends StatelessWidget {
   }
 
   Widget _buildBannerButton(String text, IconData icon, VoidCallback onPressed) {
-  return ElevatedButton(
-    onPressed: onPressed,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.white.withOpacity(0.2),
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-      ),
-      elevation: 0,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white.withOpacity(0.2),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
-      ],
-    ),
-  );
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

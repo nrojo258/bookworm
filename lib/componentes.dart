@@ -12,6 +12,7 @@ class AppBarButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final routes = {
+      'Home': '/home', 
       'Buscar': '/search',
       'Clubs': '/clubs', 
       'Perfil': '/perfil',
@@ -45,6 +46,7 @@ class AppBarButtons extends StatelessWidget {
   }
 }
 
+// ... el resto del código de componentes.dart se mantiene igual
 class SectionButton extends StatelessWidget {
   final String text;
   final bool isSelected;
