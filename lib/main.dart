@@ -153,10 +153,10 @@ class BookWormHomePage extends StatelessWidget {
                     itemCount: 4,
                     itemBuilder: (BuildContext context, int index) {
                       final List<Map<String, dynamic>> quickActions = [
-                        {'icon': Icons.library_books, 'label': 'Biblioteca'},
-                        {'icon': Icons.bookmark, 'label': 'Guardados'},
-                        {'icon': Icons.history, 'label': 'Historial'},
-                        {'icon': Icons.recommend, 'label': 'Recomendados'},
+                        {'icon': Icons.menu_book, 'label': 'Libros leídos'},
+                        {'icon': Icons.flag, 'label': 'Meta semanal'},
+                        {'icon': Icons.access_time, 'label': 'Tiempo leído'},
+                        {'icon': Icons.local_fire_department, 'label': 'Días de racha'},
                       ];
                       
                       return Container(
