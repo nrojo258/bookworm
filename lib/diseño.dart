@@ -51,7 +51,7 @@ class AppStyles {
 class AppData {
   static const List<String> formatos = ['Todos los formatos', 'Libro físico', 'Audiolibro'];
   static const List<String> generos = [
-    'Ficción', 'Thriller', 'Ciencia Ficción', 'Biografía', 'Romance', 'Fantasía',
+    'Todos los géneros', 'Ficción', 'Thriller', 'Ciencia Ficción', 'Biografía', 'Romance', 'Fantasía',
     'Misterio', 'Histórica', 'Aventura', 'Terror', 'Desarrollo Personal', 'Poesía',
     'Ensayo', 'Infantil', 'Juvenil'
   ];

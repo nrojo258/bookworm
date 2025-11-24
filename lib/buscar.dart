@@ -15,6 +15,12 @@ class _BuscarState extends State<Buscar> {
   String? generoSeleccionado = 'Todos los géneros';
 
   @override
+  void initState() {
+    super.initState();
+    generoSeleccionado = AppData.generos.isNotEmpty ? AppData.generos.first : null;
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
