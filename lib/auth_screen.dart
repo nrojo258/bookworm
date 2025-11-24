@@ -132,7 +132,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  void _navigateToHome() {Navigator.pushReplacementNamed(context, '/');}
+  void _navigateToHome() {Navigator.pushReplacementNamed(context, '/home');}
 
   Widget _buildTextField(TextEditingController controller, String label, IconData icon, 
                         {bool obscureText = false, VoidCallback? onToggleVisibility}) {

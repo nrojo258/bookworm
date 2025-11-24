@@ -45,7 +45,6 @@ class AppBarButtons extends StatelessWidget {
   }
 }
 
-// Los demás componentes permanecen igual...
 class SectionButton extends StatelessWidget {
   final String text;
   final bool isSelected;
