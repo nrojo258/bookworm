@@ -38,6 +38,10 @@ dependencies:
   cloud_firestore: ^5.0.1
   firebase_auth: ^5.0.1
   google_fonts: ^6.1.0
+  
+  # Agregar estas dependencias para la API de Google Books
+  http: ^1.1.0
+  flutter_dotenv: ^5.1.0  # Para manejar variables de entorno de forma segura
 
 dev_dependencies:
   flutter_test:

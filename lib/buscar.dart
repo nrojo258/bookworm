@@ -48,7 +48,7 @@ class _BuscarState extends State<Buscar> {
                 children: [
                   const Text('Encuentra tu próximo libro', style: AppStyles.titleMedium),
                   const SizedBox(height: 8),
-                  const Text('Busca entre miles de libros y audiolibros', style: AppStyles.bodyMedium),
+                  const Text('Busca entre libros y audiolibros', style: AppStyles.bodyMedium),
                   const SizedBox(height: 20),
                   
                   CustomSearchBar(
@@ -62,7 +62,7 @@ class _BuscarState extends State<Buscar> {
                     children: [
                       Expanded(child: DropdownFilter(
                         value: formatoSeleccionado,
-                        items: const ['Todos los formatos', 'Libro físico', 'Audiolibro'],
+                        items: const ['Todos los formatos', 'Libros', 'Audiolibros'],
                         hint: 'Formato',
                         onChanged: (value) => setState(() => formatoSeleccionado = value),
                       )),
