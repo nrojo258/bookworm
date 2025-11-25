@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
 import 'modelos.dart';
-import 'Google_API.dart';
+import 'open_library.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
@@ -13,9 +13,10 @@ class Buscar extends StatefulWidget {
 
 class _BuscarState extends State<Buscar> {
   final TextEditingController _searchController = TextEditingController();
-  final GoogleBooksService _booksService = GoogleBooksService(apiKey: 'AIzaSyAQJNo_lkKhfDhA5py6BWG5PJ7fFTZrGXc'); 
-  String? formatoSeleccionado = 'Todos los formatos';
-  String? generoSeleccionado = 'Todos los géneros';
+  final OpenLibrary _openLibraryService = OpenLibrary();
+  
+  String? _formatoSeleccionado = 'Todos los formatos';
+  String? _generoSeleccionado = 'Todos los géneros';
   
   List<Book> _searchResults = [];
   bool _isLoading = false;
@@ -24,7 +25,8 @@ class _BuscarState extends State<Buscar> {
   @override
   void initState() {
     super.initState();
-    generoSeleccionado = AppData.generos.isNotEmpty ? AppData.generos.first : null;
+    _generoSeleccionado = AppData.generos.isNotEmpty ? AppData.generos.first : null;
+    _formatoSeleccionado = 'Todos los formatos';
   }
 
   @override
@@ -34,7 +36,10 @@ class _BuscarState extends State<Buscar> {
   }
 
   Future<void> _performSearch() async {
-    if (_searchController.text.isEmpty) return;
+    if (_searchController.text.isEmpty) {
+      _showErrorSnackBar('Por favor ingresa un término de búsqueda');
+      return;
+    }
     
     setState(() {
       _isLoading = true;
@@ -42,16 +47,25 @@ class _BuscarState extends State<Buscar> {
     });
 
     try {
-      final results = await _booksService.searchBooks(
+      List<Book> results;
+      
+      print('Buscando');
+      print('Término: ${_searchController.text}');
+      print('Género: $_generoSeleccionado');
+      
+      results = await _openLibraryService.searchBooks(
         query: _searchController.text,
-        genre: generoSeleccionado == 'Todos los géneros' ? null : generoSeleccionado,
-        maxResults: 20,
+        genre: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        limit: 20,
       );
+      
+      print('Resultados encontrados: ${results.length}');
       
       setState(() {
         _searchResults = results;
       });
     } catch (e) {
+      print('Error en búsqueda: $e');
       _showErrorSnackBar('Error al buscar: $e');
       setState(() {
         _searchResults = [];
@@ -104,6 +118,16 @@ class _BuscarState extends State<Buscar> {
                     child: Image.network(
                       book.thumbnailUrl!,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
                       errorBuilder: (context, error, stackTrace) {
                         return const Icon(Icons.book, size: 40, color: Colors.grey);
                       },
@@ -143,7 +167,7 @@ class _BuscarState extends State<Buscar> {
                 if (book.publishedDate != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Publicado: ${book.publishedDate!.substring(0, 4)}',
+                    'Publicado: ${book.publishedDate}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -155,10 +179,10 @@ class _BuscarState extends State<Buscar> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.star, size: 16, color: Colors.amber),
+                      const Icon(Icons.star, size: 16, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        '${book.averageRating} (${book.ratingsCount ?? 0})',
+                        '${book.averageRating!.toStringAsFixed(1)} (${book.ratingsCount ?? 0})',
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],
@@ -170,7 +194,7 @@ class _BuscarState extends State<Buscar> {
                   Text(
                     book.description!,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -185,15 +209,34 @@ class _BuscarState extends State<Buscar> {
   Widget _buildResultsSection() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
+            SizedBox(height: 16),
+            Text('Buscando libros...', style: AppStyles.bodyMedium),
+          ],
+        ),
       );
     }
 
     if (!_hasSearched) {
       return const Center(
-        child: Text(
-          'Ingresa términos de búsqueda para encontrar libros', 
-          style: AppStyles.bodyMedium
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'Busca tu próximo libro favorito', 
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Ingresa un título, autor o género', 
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
         ),
       );
     }
@@ -209,9 +252,25 @@ class _BuscarState extends State<Buscar> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_searchResults.length} resultados encontrados',
-          style: AppStyles.bodyMedium,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${_searchResults.length} resultados encontrados',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black54,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         ..._searchResults.map(_buildBookItem).toList(),
@@ -240,33 +299,55 @@ class _BuscarState extends State<Buscar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Encuentra tu próximo libro', style: AppStyles.titleMedium),
+                  const Text(
+                    'Encuentra tu próximo libro',
+                    style: AppStyles.titleMedium,
+                  ),
                   const SizedBox(height: 8),
-                  const Text('Busca entre libros y audiolibros', style: AppStyles.bodyMedium),
+                  const Text(
+                    'Busca entre miles de libros y audiolibros',
+                    style: AppStyles.bodyMedium,
+                  ),
                   const SizedBox(height: 20),
                   
                   CustomSearchBar(
                     controller: _searchController,
-                    hintText: 'Buscar libros o audiolibros...',
+                    hintText: 'Ej: Harry Potter, Stephen King, Ciencia Ficción...',
                     onSearch: _performSearch,
                   ),
                   const SizedBox(height: 20),
 
                   Row(
                     children: [
-                      Expanded(child: DropdownFilter(
-                        value: formatoSeleccionado,
-                        items: const ['Todos los formatos', 'Libros', 'Audiolibros'],
-                        hint: 'Formato',
-                        onChanged: (value) => setState(() => formatoSeleccionado = value),
-                      )),
+                      Expanded(
+                        child: DropdownFilter(
+                          value: _formatoSeleccionado,
+                          items: const ['Todos los formatos', 'Libros', 'Audiolibros'],
+                          hint: 'Formato',
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _formatoSeleccionado = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: DropdownFilter(
-                        value: generoSeleccionado,
-                        items: AppData.generos,
-                        hint: 'Género',
-                        onChanged: (value) => setState(() => generoSeleccionado = value),
-                      )),
+                      Expanded(
+                        child: DropdownFilter(
+                          value: _generoSeleccionado,
+                          items: AppData.generos,
+                          hint: 'Género',
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _generoSeleccionado = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -280,7 +361,10 @@ class _BuscarState extends State<Buscar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Resultados de búsqueda', style: AppStyles.titleMedium),
+                  const Text(
+                    'Resultados de búsqueda',
+                    style: AppStyles.titleMedium,
+                  ),
                   const SizedBox(height: 16),
                   _buildResultsSection(),
                 ],
