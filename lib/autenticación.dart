@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'diseño.dart';
+import '../servicio/servicio_firestore.dart'; 
+import '../modelos/datos_usuario.dart'; 
 
 class Autenticacion extends StatefulWidget {
   const Autenticacion({super.key});
@@ -22,7 +24,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
   
   @override
   void dispose() {
@@ -95,18 +96,35 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
     );
 
     if (credencialUsuario.user != null) {
-      await _firestore.collection('usuarios').doc(credencialUsuario.user!.uid).set({
-        'nombre': _controladorNombre.text.trim(),
-        'correo': _controladorEmail.text.trim(),
-        'fechaCreacion': FieldValue.serverTimestamp(),
-        'preferencias': {'generos': [], 'formatos': []},
-        'estadisticas': {'librosLeidos': 0, 'tiempoLectura': 0, 'rachaActual': 0}
-      });
-      
-      _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
-      _navegarAInicio();
+      final datosUsuario = DatosUsuario(
+        uid: credencialUsuario.user!.uid,
+        nombre: _controladorNombre.text.trim(),
+        correo: _controladorEmail.text.trim(),
+        fechaCreacion: DateTime.now(),
+        preferencias: {
+          'generos': [],
+          'formatos': ['fisico', 'audio'],
+          'notificaciones': true,
+        },
+        estadisticas: {
+          'librosLeidos': 0,
+          'tiempoLectura': 0, 
+          'rachaActual': 0, 
+          'paginasTotales': 0,
+        },
+        generosFavoritos: [],
+      );
+
+      try {
+        final servicioFirestore = ServicioFirestore();
+        await servicioFirestore.crearUsuario(datosUsuario);
+        _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
+        _navegarAInicio();
+      } catch (e) {
+        _mostrarSnackBar('Error al guardar datos: $e', Colors.red);
+      }
     }
-  }
+  } 
 
   void _manejarErrorFirebase(FirebaseAuthException e) {
     final mensajesError = {
@@ -138,7 +156,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   }
 
   Widget _construirCampoTexto(TextEditingController controlador, String etiqueta, IconData icono, 
-                        {bool textoOculto = false, VoidCallback? alAlternarVisibilidad}) {
+  {bool textoOculto = false, VoidCallback? alAlternarVisibilidad}) {
     return TextFormField(
       controller: controlador,
       decoration: InputDecoration(

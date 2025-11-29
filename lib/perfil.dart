@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-
+import '../servicio/servicio_firestore.dart'; 
+import '../modelos/datos_usuario.dart'; 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
 
@@ -11,33 +13,50 @@ class Perfil extends StatefulWidget {
 
 class _PerfilState extends State<Perfil> {
   int _seccionSeleccionada = 0;
+  DatosUsuario? _datosUsuario; 
+  bool _estaCargando = true;
+  final ServicioFirestore _servicioFirestore = ServicioFirestore();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColores.fondo,
-      appBar: AppBar(
-        title: const Text('BookWorm', style: EstilosApp.tituloGrande),
-        backgroundColor: AppColores.primario,
-        automaticallyImplyLeading: false,
-        actions: const [BotonesBarraApp(rutaActual: '/perfil')],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _construirEncabezadoPerfil(),
-            const SizedBox(height: 20),
-            _construirSelectorSeccion(),
-            const SizedBox(height: 20),
-            _construirContenidoSeccion(),
-          ],
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _cargarDatosUsuario();
+  }
+
+  Future<void> _cargarDatosUsuario() async {
+    final usuario = _auth.currentUser;
+    if (usuario != null) {
+      try {
+        final datosUsuario = await _servicioFirestore.obtenerDatosUsuario(usuario.uid);
+        setState(() {
+          _datosUsuario = datosUsuario;
+          _estaCargando = false;
+        });
+      } catch (e) {
+        print('Error cargando datos: $e');
+        setState(() {
+          _estaCargando = false;
+        });
+      }
+    } else {
+      setState(() {
+        _estaCargando = false;
+      });
+    }
   }
 
   Widget _construirEncabezadoPerfil() {
+    if (_estaCargando) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: EstilosApp.decoracionTarjeta,
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: EstilosApp.decoracionTarjeta,
@@ -72,17 +91,27 @@ class _PerfilState extends State<Perfil> {
                 child: const Icon(Icons.person, size: 40, color: AppColores.primario),
               ),
               const SizedBox(width: 20),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Nombre del usuario', style: EstilosApp.tituloPequeno),
-                    SizedBox(height: 4),
-                    Text('email@ejemplo.com', style: EstilosApp.cuerpoMedio),
-                    SizedBox(height: 8),
                     Text(
-                      'Lector activo', 
-                      style: TextStyle(fontSize: 12, color: AppColores.secundario, fontWeight: FontWeight.w500)
+                      _datosUsuario?.nombre ?? 'Usuario',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _datosUsuario?.correo ?? 'email@ejemplo.com',
+                      style: EstilosApp.cuerpoMedio,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_datosUsuario?.estadisticas['librosLeidos'] ?? 0} libros leídos', 
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: AppColores.secundario, 
+                        fontWeight: FontWeight.w500
+                      ),
                     ),
                   ],
                 ),
@@ -135,9 +164,9 @@ class _PerfilState extends State<Perfil> {
           _construirTarjetaInfo(
             'Datos Personales',
             [
-              _construirElementoInfo('Nombre completo', ''),
-              _construirElementoInfo('Email', ''),
-              _construirElementoInfo('Fecha de registro', ''),
+              _construirElementoInfo('Nombre completo', _datosUsuario?.nombre ?? 'No especificado'),
+              _construirElementoInfo('Email', _datosUsuario?.correo ?? 'No especificado'),
+              _construirElementoInfo('Fecha de registro', _datosUsuario?.fechaCreacion.toString().substring(0, 10) ?? 'No especificado'),
             ],
             Icons.person,
           ),
@@ -158,10 +187,9 @@ class _PerfilState extends State<Perfil> {
           _construirTarjetaInfo(
             'Preferencias de Lectura',
             [
-              _construirElementoInfo('Géneros favoritos', ''),
-              _construirElementoInfo('Formato preferido', ''),
-              _construirElementoInfo('Idiomas', ''),
-              _construirElementoInfo('Metas de lectura', ''),
+              _construirElementoInfo('Géneros favoritos', _datosUsuario?.generosFavoritos.join(', ') ?? 'No especificado'),
+              _construirElementoInfo('Formato preferido', _datosUsuario?.preferencias['formatos']?.join(', ') ?? 'No especificado'),
+              _construirElementoInfo('Notificaciones', _datosUsuario?.preferencias['notificaciones'] == true ? 'Activadas' : 'Desactivadas'),
             ],
             Icons.favorite,
           ),
@@ -257,9 +285,18 @@ class _PerfilState extends State<Perfil> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _construirElementoEstadistica('0', 'Libros leídos'),
-                _construirElementoEstadistica('0', 'Páginas'),
-                _construirElementoEstadistica('0', 'Días racha'),
+                _construirElementoEstadistica(
+                  '${_datosUsuario?.estadisticas['librosLeidos'] ?? 0}', 
+                  'Libros leídos'
+                ),
+                _construirElementoEstadistica(
+                  '${_datosUsuario?.estadisticas['paginasTotales'] ?? 0}', 
+                  'Páginas'
+                ),
+                _construirElementoEstadistica(
+                  '${_datosUsuario?.estadisticas['rachaActual'] ?? 0}', 
+                  'Días racha'
+                ),
               ],
             ),
           ),
@@ -506,6 +543,31 @@ class _PerfilState extends State<Perfil> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColores.fondo,
+      appBar: AppBar(
+        title: const Text('BookWorm', style: EstilosApp.tituloGrande),
+        backgroundColor: AppColores.primario,
+        automaticallyImplyLeading: false,
+        actions: const [BotonesBarraApp(rutaActual: '/perfil')],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _construirEncabezadoPerfil(),
+            const SizedBox(height: 20),
+            _construirSelectorSeccion(),
+            const SizedBox(height: 20),
+            _construirContenidoSeccion(),
+          ],
+        ),
       ),
     );
   }
