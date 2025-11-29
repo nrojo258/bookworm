@@ -67,21 +67,7 @@ class PaginaInicio extends StatelessWidget {
           children: <Widget>[
             Container(
               height: 180,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColores.primario, AppColores.secundario],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
+              decoration: EstilosApp.decoracionGradiente,
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: <Widget>[
@@ -109,16 +95,16 @@ class PaginaInicio extends StatelessWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            _construirBoton(
-                              'Buscar libros', 
-                              Icons.search, 
-                              () => Navigator.pushNamed(context, '/search')
+                            BotonAccionRapida(
+                              texto: 'Buscar libros',
+                              icono: Icons.search,
+                              alPresionar: () => Navigator.pushNamed(context, '/search'),
                             ),
                             const SizedBox(width: 12),
-                            _construirBoton(
-                              'Ver progreso', 
-                              Icons.trending_up, 
-                              () => Navigator.pushNamed(context, '/perfil')
+                            BotonAccionRapida(
+                              texto: 'Ver progreso',
+                              icono: Icons.trending_up,
+                              alPresionar: () => Navigator.pushNamed(context, '/perfil'),
                             ),
                           ],
                         ),
@@ -155,37 +141,22 @@ class PaginaInicio extends StatelessWidget {
                       mainAxisSpacing: 16,
                       childAspectRatio: 1.0,
                     ),
-                    itemCount: 4,
+                    itemCount: DatosApp.accionesRapidas.length,
                     itemBuilder: (BuildContext context, int index) {
-                      final List<Map<String, dynamic>> accionesRapidas = [
-                        {'icono': Icons.menu_book, 'etiqueta': 'Libros leídos'},
-                        {'icono': Icons.flag, 'etiqueta': 'Meta semanal'},
-                        {'icono': Icons.access_time, 'etiqueta': 'Tiempo leído'},
-                        {'icono': Icons.local_fire_department, 'etiqueta': 'Días de racha'},
-                      ];
-                      
                       return Container(
-                        decoration: BoxDecoration(
-                          color: AppColores.fondo,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
+                        decoration: EstilosApp.decoracionTarjetaPlana,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              accionesRapidas[index]['icono'],
+                              DatosApp.accionesRapidas[index]['icono'],
                               size: 32,
                               color: AppColores.primario,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              accionesRapidas[index]['etiqueta'],
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
+                              DatosApp.accionesRapidas[index]['etiqueta'],
+                              style: EstilosApp.cuerpoPequeno,
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -212,21 +183,14 @@ class PaginaInicio extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           'Mis lecturas actuales',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          style: EstilosApp.tituloPequeno,
                         ),
                         SizedBox(height: 16),
                         Expanded(
                           child: Center(
                             child: Text(
                               'No tienes lecturas en progreso',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
+                              style: EstilosApp.cuerpoMedio,
                             ),
                           ),
                         ),
@@ -246,21 +210,14 @@ class PaginaInicio extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           'Actividad reciente',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          style: EstilosApp.tituloPequeno,
                         ),
                         SizedBox(height: 16),
                         Expanded(
                           child: Center(
                             child: Text(
                               'No hay actividad reciente',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
+                              style: EstilosApp.cuerpoMedio,
                             ),
                           ),
                         ),
@@ -272,36 +229,6 @@ class PaginaInicio extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _construirBoton(String texto, IconData icono, VoidCallback alPresionar) {
-    return ElevatedButton(
-      onPressed: alPresionar,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.2),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            texto,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }

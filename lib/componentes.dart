@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
+import 'modelos.dart';
 
 class BotonesBarraApp extends StatelessWidget {
   final String rutaActual;
@@ -235,6 +236,254 @@ class FiltroDesplegable extends StatelessWidget {
           )).toList(),
           onChanged: alCambiar,
         ),
+      ),
+    );
+  }
+}
+
+class TarjetaLibro extends StatelessWidget {
+  final Libro libro;
+  final VoidCallback? alPresionar;
+
+  const TarjetaLibro({
+    super.key,
+    required this.libro,
+    this.alPresionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: alPresionar,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: EstilosApp.decoracionTarjetaPlana,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _construirPortadaLibro(),
+            const SizedBox(width: 16),
+            Expanded(child: _construirInfoLibro()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirPortadaLibro() {
+    return Container(
+      width: 80,
+      height: 120,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[200],
+      ),
+      child: libro.urlMiniatura != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                libro.urlMiniatura!,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progresoCarga) {
+                  if (progresoCarga == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: progresoCarga.expectedTotalBytes != null
+                          ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.book, size: 40, color: Colors.grey);
+                },
+              ),
+            )
+          : const Icon(Icons.book, size: 40, color: Colors.grey),
+    );
+  }
+
+  Widget _construirInfoLibro() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          libro.titulo,
+          style: EstilosApp.tituloPequeno,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        
+        if (libro.autores.isNotEmpty)
+          Text(
+            'Por ${libro.autores.join(', ')}',
+            style: EstilosApp.cuerpoMedio,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        
+        if (libro.fechaPublicacion != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Publicado: ${libro.fechaPublicacion}',
+            style: EstilosApp.cuerpoPequeno,
+          ),
+        ],
+        
+        if (libro.calificacionPromedio != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.star, size: 16, color: Colors.amber),
+              const SizedBox(width: 4),
+              Text(
+                '${libro.calificacionPromedio!.toStringAsFixed(1)} (${libro.numeroCalificaciones ?? 0})',
+                style: EstilosApp.cuerpoPequeno,
+              ),
+            ],
+          ),
+        ],
+        
+        if (libro.descripcion != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            libro.descripcion!,
+            style: EstilosApp.cuerpoPequeno,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class ElementoConfiguracion extends StatelessWidget {
+  final String titulo;
+  final String subtitulo;
+  final IconData icono;
+  final bool tieneSwitch;
+  final bool valorSwitch;
+  final ValueChanged<bool>? alCambiarSwitch;
+  final VoidCallback? alPresionar;
+
+  const ElementoConfiguracion({
+    super.key,
+    required this.titulo,
+    required this.subtitulo,
+    required this.icono,
+    this.tieneSwitch = false,
+    this.valorSwitch = false,
+    this.alCambiarSwitch,
+    this.alPresionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColores.primario.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icono, size: 20, color: AppColores.primario),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titulo, style: EstilosApp.cuerpoGrande),
+                const SizedBox(height: 4),
+                Text(subtitulo, style: EstilosApp.cuerpoMedio),
+              ],
+            ),
+          ),
+          if (tieneSwitch)
+            Switch(
+              value: valorSwitch,
+              onChanged: alCambiarSwitch,
+              activeColor: AppColores.primario,
+            )
+          else
+            const Icon(Icons.chevron_right, color: Colors.grey),
+        ],
+      ),
+    );
+  }
+}
+
+class IndicadorCarga extends StatelessWidget {
+  final String mensaje;
+
+  const IndicadorCarga({
+    super.key,
+    this.mensaje = 'Cargando...',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario)),
+          const SizedBox(height: 16),
+          Text(mensaje, style: EstilosApp.cuerpoMedio),
+        ],
+      ),
+    );
+  }
+}
+
+class BotonAccionRapida extends StatelessWidget {
+  final String texto;
+  final IconData icono;
+  final VoidCallback alPresionar;
+
+  const BotonAccionRapida({
+    super.key,
+    required this.texto,
+    required this.icono,
+    required this.alPresionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: alPresionar,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white.withOpacity(0.2),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            texto,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

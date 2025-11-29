@@ -45,7 +45,7 @@ class _ClubsState extends State<Clubs> {
                 const SizedBox(height: 20),
                 const Text(
                   'Género del club', 
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                  style: EstilosApp.cuerpoGrande
                 ),
                 const SizedBox(height: 10),
                 FiltroDesplegable(

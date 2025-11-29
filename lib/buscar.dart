@@ -49,23 +49,16 @@ class _BuscarState extends State<Buscar> {
     try {
       List<Libro> resultados;
       
-      print('Buscando');
-      print('Término: ${_controladorBusqueda.text}');
-      print('Género: $_generoSeleccionado');
-      
       resultados = await _servicioOpenLibrary.buscarLibros(
         consulta: _controladorBusqueda.text,
         genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
         limite: 20,
       );
       
-      print('Resultados encontrados: ${resultados.length}');
-      
       setState(() {
         _resultadosBusqueda = resultados;
       });
     } catch (e) {
-      print('Error en búsqueda: $e');
       _mostrarError('Error al buscar: $e');
       setState(() {
         _resultadosBusqueda = [];
@@ -87,157 +80,16 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
-  Widget _ElementoLibro(Libro libro) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 80,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey[200],
-            ),
-            child: libro.urlMiniatura != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      libro.urlMiniatura!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progresoCarga) {
-                        if (progresoCarga == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: progresoCarga.expectedTotalBytes != null
-                                ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.book, size: 40, color: Colors.grey);
-                      },
-                    ),
-                  )
-                : const Icon(Icons.book, size: 40, color: Colors.grey),
-          ),
-          const SizedBox(width: 16),
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  libro.titulo,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                
-                if (libro.autores.isNotEmpty)
-                  Text(
-                    'Por ${libro.autores.join(', ')}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                
-                if (libro.fechaPublicacion != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Publicado: ${libro.fechaPublicacion}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-                
-                if (libro.calificacionPromedio != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 16, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${libro.calificacionPromedio!.toStringAsFixed(1)} (${libro.numeroCalificaciones ?? 0})',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-                
-                if (libro.descripcion != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    libro.descripcion!,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _SeccionResultados() {
     if (_estaCargando) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario)),
-            SizedBox(height: 16),
-            Text('Buscando libros...', style: EstilosApp.cuerpoMedio),
-          ],
-        ),
-      );
+      return const IndicadorCarga(mensaje: 'Buscando libros...');
     }
 
     if (!_haBuscado) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Busca tu próximo libro favorito', 
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Ingresa un título, autor o género', 
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
+      return const EstadoVacio(
+        icono: Icons.search,
+        titulo: 'Busca tu próximo libro favorito',
+        descripcion: 'Ingresa un título, autor o género',
       );
     }
 
@@ -257,11 +109,7 @@ class _BuscarState extends State<Buscar> {
           children: [
             Text(
               '${_resultadosBusqueda.length} resultados encontrados',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
-              ),
+              style: EstilosApp.cuerpoMedio,
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -273,7 +121,7 @@ class _BuscarState extends State<Buscar> {
           ],
         ),
         const SizedBox(height: 16),
-        ..._resultadosBusqueda.map(_ElementoLibro).toList(),
+        ..._resultadosBusqueda.map((libro) => TarjetaLibro(libro: libro)).toList(),
       ],
     );
   }
