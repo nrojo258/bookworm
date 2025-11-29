@@ -35,7 +35,7 @@ class AppBookWorm extends StatelessWidget {
       ),
       routes: {
         '/': (context) => const Autenticacion(),
-        '/home': (context) => const PaginaInicioBookWorm(),
+        '/home': (context) => const PaginaInicio(),
         '/search': (context) => const Buscar(),
         '/clubs': (context) => const Clubs(),
         '/perfil': (context) => const Perfil(),
@@ -45,8 +45,8 @@ class AppBookWorm extends StatelessWidget {
   }
 }
 
-class PaginaInicioBookWorm extends StatelessWidget {
-  const PaginaInicioBookWorm({super.key});
+class PaginaInicio extends StatelessWidget {
+  const PaginaInicio({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -109,13 +109,13 @@ class PaginaInicioBookWorm extends StatelessWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            _construirBotonBanner(
+                            _construirBoton(
                               'Buscar libros', 
                               Icons.search, 
                               () => Navigator.pushNamed(context, '/search')
                             ),
                             const SizedBox(width: 12),
-                            _construirBotonBanner(
+                            _construirBoton(
                               'Ver progreso', 
                               Icons.trending_up, 
                               () => Navigator.pushNamed(context, '/perfil')
@@ -276,7 +276,7 @@ class PaginaInicioBookWorm extends StatelessWidget {
     );
   }
 
-  Widget _construirBotonBanner(String texto, IconData icono, VoidCallback alPresionar) {
+  Widget _construirBoton(String texto, IconData icono, VoidCallback alPresionar) {
     return ElevatedButton(
       onPressed: alPresionar,
       style: ElevatedButton.styleFrom(

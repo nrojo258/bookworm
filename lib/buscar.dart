@@ -37,7 +37,7 @@ class _BuscarState extends State<Buscar> {
 
   Future<void> _realizarBusqueda() async {
     if (_controladorBusqueda.text.isEmpty) {
-      _mostrarErrorSnackBar('Por favor ingresa un término de búsqueda');
+      _mostrarError('Por favor ingresa un término de búsqueda');
       return;
     }
     
@@ -66,7 +66,7 @@ class _BuscarState extends State<Buscar> {
       });
     } catch (e) {
       print('Error en búsqueda: $e');
-      _mostrarErrorSnackBar('Error al buscar: $e');
+      _mostrarError('Error al buscar: $e');
       setState(() {
         _resultadosBusqueda = [];
       });
@@ -77,7 +77,7 @@ class _BuscarState extends State<Buscar> {
     }
   }
 
-  void _mostrarErrorSnackBar(String mensaje) {
+  void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
@@ -87,7 +87,7 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
-  Widget _construirElementoLibro(Libro libro) {
+  Widget _ElementoLibro(Libro libro) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -206,7 +206,7 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
-  Widget _construirSeccionResultados() {
+  Widget _SeccionResultados() {
     if (_estaCargando) {
       return const Center(
         child: Column(
@@ -273,7 +273,7 @@ class _BuscarState extends State<Buscar> {
           ],
         ),
         const SizedBox(height: 16),
-        ..._resultadosBusqueda.map(_construirElementoLibro).toList(),
+        ..._resultadosBusqueda.map(_ElementoLibro).toList(),
       ],
     );
   }
@@ -366,7 +366,7 @@ class _BuscarState extends State<Buscar> {
                     style: EstilosApp.tituloMedio,
                   ),
                   const SizedBox(height: 16),
-                  _construirSeccionResultados(),
+                  _SeccionResultados(),
                 ],
               ),
             ),

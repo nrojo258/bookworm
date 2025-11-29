@@ -25,7 +25,7 @@ class OpenLibrary {
         
         if (docs == null) return [];
         
-        return docs.map((doc) => _libroDesdeDocOpenLibrary(doc)).toList();
+        return docs.map((doc) => _libroDeDocOpenLibrary(doc)).toList();
       } else {
         throw Exception('Error al buscar libros: ${respuesta.statusCode}');
       }
@@ -41,7 +41,7 @@ class OpenLibrary {
 
       if (respuesta.statusCode == 200) {
         final datos = json.decode(respuesta.body);
-        return _libroDesdeJsonOpenLibrary(datos);
+        return _libroDeJsonOpenLibrary(datos);
       } else {
         throw Exception('Error al obtener detalles del libro: ${respuesta.statusCode}');
       }
@@ -64,7 +64,7 @@ class OpenLibrary {
         
         if (works == null) return [];
         
-        return works.map((work) => _libroDesdeWorkOpenLibrary(work)).toList();
+        return works.map((work) => _libroDeWorkOpenLibrary(work)).toList();
       } else {
         throw Exception('Error al buscar por género: ${respuesta.statusCode}');
       }
@@ -80,7 +80,7 @@ class OpenLibrary {
 
       if (respuesta.statusCode == 200) {
         final datos = json.decode(respuesta.body);
-        return _libroDesdeJsonOpenLibrary(datos);
+        return _libroDeJsonOpenLibrary(datos);
       } else {
         return null;
       }
@@ -89,7 +89,7 @@ class OpenLibrary {
     }
   }
 
-  Libro _libroDesdeDocOpenLibrary(Map<String, dynamic> doc) {
+  Libro _libroDeDocOpenLibrary(Map<String, dynamic> doc) {
     String? urlMiniatura;
     if (doc['cover_i'] != null) {
       urlMiniatura = 'https://covers.openlibrary.org/b/id/${doc['cover_i']}-M.jpg';
@@ -119,7 +119,7 @@ class OpenLibrary {
     );
   }
 
-  Libro _libroDesdeJsonOpenLibrary(Map<String, dynamic> json) {
+  Libro _libroDeJsonOpenLibrary(Map<String, dynamic> json) {
     return Libro(
       id: json['key'] ?? '',
       titulo: json['title'] ?? 'Título no disponible',
@@ -134,7 +134,7 @@ class OpenLibrary {
     );
   }
 
-  Libro _libroDesdeWorkOpenLibrary(Map<String, dynamic> work) {
+  Libro _libroDeWorkOpenLibrary(Map<String, dynamic> work) {
     return Libro(
       id: work['key'] ?? '',
       titulo: work['title'] ?? 'Título no disponible',
