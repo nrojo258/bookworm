@@ -12,82 +12,82 @@ class Buscar extends StatefulWidget {
 }
 
 class _BuscarState extends State<Buscar> {
-  final TextEditingController _searchController = TextEditingController();
-  final OpenLibrary _openLibraryService = OpenLibrary();
+  final TextEditingController _controladorBusqueda = TextEditingController();
+  final OpenLibrary _servicioOpenLibrary = OpenLibrary();
   
   String? _formatoSeleccionado = 'Todos los formatos';
   String? _generoSeleccionado = 'Todos los géneros';
   
-  List<Book> _searchResults = [];
-  bool _isLoading = false;
-  bool _hasSearched = false;
+  List<Libro> _resultadosBusqueda = [];
+  bool _estaCargando = false;
+  bool _haBuscado = false;
 
   @override
   void initState() {
     super.initState();
-    _generoSeleccionado = AppData.generos.isNotEmpty ? AppData.generos.first : null;
+    _generoSeleccionado = DatosApp.generos.isNotEmpty ? DatosApp.generos.first : null;
     _formatoSeleccionado = 'Todos los formatos';
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _controladorBusqueda.dispose();
     super.dispose();
   }
 
-  Future<void> _performSearch() async {
-    if (_searchController.text.isEmpty) {
-      _showErrorSnackBar('Por favor ingresa un término de búsqueda');
+  Future<void> _realizarBusqueda() async {
+    if (_controladorBusqueda.text.isEmpty) {
+      _mostrarErrorSnackBar('Por favor ingresa un término de búsqueda');
       return;
     }
     
     setState(() {
-      _isLoading = true;
-      _hasSearched = true;
+      _estaCargando = true;
+      _haBuscado = true;
     });
 
     try {
-      List<Book> results;
+      List<Libro> resultados;
       
       print('Buscando');
-      print('Término: ${_searchController.text}');
+      print('Término: ${_controladorBusqueda.text}');
       print('Género: $_generoSeleccionado');
       
-      results = await _openLibraryService.searchBooks(
-        query: _searchController.text,
-        genre: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
-        limit: 20,
+      resultados = await _servicioOpenLibrary.buscarLibros(
+        consulta: _controladorBusqueda.text,
+        genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        limite: 20,
       );
       
-      print('Resultados encontrados: ${results.length}');
+      print('Resultados encontrados: ${resultados.length}');
       
       setState(() {
-        _searchResults = results;
+        _resultadosBusqueda = resultados;
       });
     } catch (e) {
       print('Error en búsqueda: $e');
-      _showErrorSnackBar('Error al buscar: $e');
+      _mostrarErrorSnackBar('Error al buscar: $e');
       setState(() {
-        _searchResults = [];
+        _resultadosBusqueda = [];
       });
     } finally {
       setState(() {
-        _isLoading = false;
+        _estaCargando = false;
       });
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  void _mostrarErrorSnackBar(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(mensaje),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  Widget _buildBookItem(Book book) {
+  Widget _construirElementoLibro(Libro libro) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -112,18 +112,18 @@ class _BuscarState extends State<Buscar> {
               borderRadius: BorderRadius.circular(8),
               color: Colors.grey[200],
             ),
-            child: book.thumbnailUrl != null
+            child: libro.urlMiniatura != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      book.thumbnailUrl!,
+                      libro.urlMiniatura!,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
+                      loadingBuilder: (context, child, progresoCarga) {
+                        if (progresoCarga == null) return child;
                         return Center(
                           child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            value: progresoCarga.expectedTotalBytes != null
+                                ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
                                 : null,
                           ),
                         );
@@ -142,7 +142,7 @@ class _BuscarState extends State<Buscar> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  book.title,
+                  libro.titulo,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -153,9 +153,9 @@ class _BuscarState extends State<Buscar> {
                 ),
                 const SizedBox(height: 8),
                 
-                if (book.authors.isNotEmpty)
+                if (libro.autores.isNotEmpty)
                   Text(
-                    'Por ${book.authors.join(', ')}',
+                    'Por ${libro.autores.join(', ')}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.black54,
@@ -164,10 +164,10 @@ class _BuscarState extends State<Buscar> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 
-                if (book.publishedDate != null) ...[
+                if (libro.fechaPublicacion != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Publicado: ${book.publishedDate}',
+                    'Publicado: ${libro.fechaPublicacion}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -175,24 +175,24 @@ class _BuscarState extends State<Buscar> {
                   ),
                 ],
                 
-                if (book.averageRating != null) ...[
+                if (libro.calificacionPromedio != null) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       const Icon(Icons.star, size: 16, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        '${book.averageRating!.toStringAsFixed(1)} (${book.ratingsCount ?? 0})',
+                        '${libro.calificacionPromedio!.toStringAsFixed(1)} (${libro.numeroCalificaciones ?? 0})',
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
                 ],
                 
-                if (book.description != null) ...[
+                if (libro.descripcion != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    book.description!,
+                    libro.descripcion!,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -206,21 +206,21 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
-  Widget _buildResultsSection() {
-    if (_isLoading) {
+  Widget _construirSeccionResultados() {
+    if (_estaCargando) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
+            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario)),
             SizedBox(height: 16),
-            Text('Buscando libros...', style: AppStyles.bodyMedium),
+            Text('Buscando libros...', style: EstilosApp.cuerpoMedio),
           ],
         ),
       );
     }
 
-    if (!_hasSearched) {
+    if (!_haBuscado) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -241,11 +241,11 @@ class _BuscarState extends State<Buscar> {
       );
     }
 
-    if (_searchResults.isEmpty) {
-      return const EmptyState(
-        icon: Icons.search_off,
-        title: 'No se encontraron libros',
-        description: 'Intenta con otros términos de búsqueda',
+    if (_resultadosBusqueda.isEmpty) {
+      return const EstadoVacio(
+        icono: Icons.search_off,
+        titulo: 'No se encontraron libros',
+        descripcion: 'Intenta con otros términos de búsqueda',
       );
     }
 
@@ -256,7 +256,7 @@ class _BuscarState extends State<Buscar> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '${_searchResults.length} resultados encontrados',
+              '${_resultadosBusqueda.length} resultados encontrados',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -266,14 +266,14 @@ class _BuscarState extends State<Buscar> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColores.primario.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        ..._searchResults.map(_buildBookItem).toList(),
+        ..._resultadosBusqueda.map(_construirElementoLibro).toList(),
       ],
     );
   }
@@ -281,12 +281,12 @@ class _BuscarState extends State<Buscar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColores.fondo,
       appBar: AppBar(
-        title: const Text('BookWorm', style: AppStyles.titleLarge),
-        backgroundColor: AppColors.primary,
+        title: const Text('BookWorm', style: EstilosApp.tituloGrande),
+        backgroundColor: AppColores.primario,
         automaticallyImplyLeading: false,
-        actions: const [AppBarButtons(currentRoute: '/search')],
+        actions: const [BotonesBarraApp(rutaActual: '/search')],
       ),
       
       body: SingleChildScrollView(
@@ -295,39 +295,39 @@ class _BuscarState extends State<Buscar> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: AppStyles.cardDecoration,
+              decoration: EstilosApp.decoracionTarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Encuentra tu próximo libro',
-                    style: AppStyles.titleMedium,
+                    style: EstilosApp.tituloMedio,
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Busca entre miles de libros y audiolibros',
-                    style: AppStyles.bodyMedium,
+                    style: EstilosApp.cuerpoMedio,
                   ),
                   const SizedBox(height: 20),
                   
-                  CustomSearchBar(
-                    controller: _searchController,
-                    hintText: 'Ej: Harry Potter, Stephen King, Ciencia Ficción...',
-                    onSearch: _performSearch,
+                  BarraBusquedaPersonalizada(
+                    controlador: _controladorBusqueda,
+                    textoHint: 'Ej: Harry Potter, Stephen King, Ciencia Ficción...',
+                    alBuscar: _realizarBusqueda,
                   ),
                   const SizedBox(height: 20),
 
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownFilter(
-                          value: _formatoSeleccionado,
+                        child: FiltroDesplegable(
+                          valor: _formatoSeleccionado,
                           items: const ['Todos los formatos', 'Libros', 'Audiolibros'],
                           hint: 'Formato',
-                          onChanged: (value) {
-                            if (value != null) {
+                          alCambiar: (valor) {
+                            if (valor != null) {
                               setState(() {
-                                _formatoSeleccionado = value;
+                                _formatoSeleccionado = valor;
                               });
                             }
                           },
@@ -335,14 +335,14 @@ class _BuscarState extends State<Buscar> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: DropdownFilter(
-                          value: _generoSeleccionado,
-                          items: AppData.generos,
+                        child: FiltroDesplegable(
+                          valor: _generoSeleccionado,
+                          items: DatosApp.generos,
                           hint: 'Género',
-                          onChanged: (value) {
-                            if (value != null) {
+                          alCambiar: (valor) {
+                            if (valor != null) {
                               setState(() {
-                                _generoSeleccionado = value;
+                                _generoSeleccionado = valor;
                               });
                             }
                           },
@@ -357,16 +357,16 @@ class _BuscarState extends State<Buscar> {
 
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: AppStyles.cardDecoration,
+              decoration: EstilosApp.decoracionTarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Resultados de búsqueda',
-                    style: AppStyles.titleMedium,
+                    style: EstilosApp.tituloMedio,
                   ),
                   const SizedBox(height: 16),
-                  _buildResultsSection(),
+                  _construirSeccionResultados(),
                 ],
               ),
             ),

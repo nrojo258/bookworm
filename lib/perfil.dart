@@ -10,46 +10,46 @@ class Perfil extends StatefulWidget {
 }
 
 class _PerfilState extends State<Perfil> {
-  int _selectedSection = 0;
+  int _seccionSeleccionada = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColores.fondo,
       appBar: AppBar(
-        title: const Text('BookWorm', style: AppStyles.titleLarge),
-        backgroundColor: AppColors.primary,
+        title: const Text('BookWorm', style: EstilosApp.tituloGrande),
+        backgroundColor: AppColores.primario,
         automaticallyImplyLeading: false,
-        actions: const [AppBarButtons(currentRoute: '/perfil')],
+        actions: const [BotonesBarraApp(rutaActual: '/perfil')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _buildProfileHeader(),
+            _construirEncabezadoPerfil(),
             const SizedBox(height: 20),
-            _buildSectionSelector(),
+            _construirSelectorSeccion(),
             const SizedBox(height: 20),
-            _buildSectionContent(),
+            _construirContenidoSeccion(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _construirEncabezadoPerfil() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Mi Perfil', style: AppStyles.titleMedium),
+              const Text('Mi Perfil', style: EstilosApp.tituloMedio),
               ElevatedButton(
                 onPressed: () {},
-                style: AppStyles.primaryButton,
+                style: EstilosApp.botonPrimario,
                 child: const Row(children: [
                   Icon(Icons.edit, size: 16),
                   SizedBox(width: 6),
@@ -66,10 +66,10 @@ class _PerfilState extends State<Perfil> {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primary.withOpacity(0.1),
-                  border: Border.all(color: AppColors.primary, width: 2),
+                  color: AppColores.primario.withOpacity(0.1),
+                  border: Border.all(color: AppColores.primario, width: 2),
                 ),
-                child: const Icon(Icons.person, size: 40, color: AppColors.primary),
+                child: const Icon(Icons.person, size: 40, color: AppColores.primario),
               ),
               const SizedBox(width: 20),
               const Expanded(
@@ -78,11 +78,11 @@ class _PerfilState extends State<Perfil> {
                   children: [
                     Text('Nombre del usuario', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     SizedBox(height: 4),
-                    Text('email@ejemplo.com', style: AppStyles.bodyMedium),
+                    Text('email@ejemplo.com', style: EstilosApp.cuerpoMedio),
                     SizedBox(height: 8),
                     Text(
                       'Lector activo', 
-                      style: TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.w500)
+                      style: TextStyle(fontSize: 12, color: AppColores.secundario, fontWeight: FontWeight.w500)
                     ),
                   ],
                 ),
@@ -94,63 +94,63 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildSectionSelector() {
-    final sections = [
-      {'text': 'Información', 'icon': Icons.person_outline},
-      {'text': 'Mi Progreso', 'icon': Icons.trending_up},
-      {'text': 'Estadísticas', 'icon': Icons.analytics},
-      {'text': 'Configuración', 'icon': Icons.settings},
+  Widget _construirSelectorSeccion() {
+    final secciones = [
+      {'texto': 'Información', 'icono': Icons.person_outline},
+      {'texto': 'Mi Progreso', 'icono': Icons.trending_up},
+      {'texto': 'Estadísticas', 'icono': Icons.analytics},
+      {'texto': 'Configuración', 'icono': Icons.settings},
     ];
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Row(children: [
-        for (int i = 0; i < sections.length; i++) ...[
+        for (int i = 0; i < secciones.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
-          Expanded(child: SectionButton(
-            text: sections[i]['text'] as String,
-            isSelected: _selectedSection == i,
-            icon: sections[i]['icon'] as IconData,
-            onPressed: () => setState(() => _selectedSection = i),
+          Expanded(child: BotonSeccion(
+            texto: secciones[i]['texto'] as String,
+            estaSeleccionado: _seccionSeleccionada == i,
+            icono: secciones[i]['icono'] as IconData,
+            alPresionar: () => setState(() => _seccionSeleccionada = i),
           )),
         ],
       ]),
     );
   }
 
-  Widget _buildSectionContent() {
-    final sections = [
-      _buildInformacionSection(),
-      _buildProgresoSection(),
-      _buildEstadisticasSection(),
-      _buildConfiguracionSection(),
+  Widget _construirContenidoSeccion() {
+    final secciones = [
+      _construirSeccionInformacion(),
+      _construirSeccionProgreso(),
+      _construirSeccionEstadisticas(),
+      _construirSeccionConfiguracion(),
     ];
-    return sections[_selectedSection];
+    return secciones[_seccionSeleccionada];
   }
 
-  Widget _buildInformacionSection() {
+  Widget _construirSeccionInformacion() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Información Personal', style: AppStyles.titleMedium),
+          const Text('Información Personal', style: EstilosApp.tituloMedio),
           const SizedBox(height: 20),
           
-          _buildInfoCard(
+          _construirTarjetaInfo(
             'Datos Personales',
             [
-              _buildInfoItem('Nombre completo', ''),
-              _buildInfoItem('Email', ''),
-              _buildInfoItem('Fecha de registro', ''),
+              _construirElementoInfo('Nombre completo', ''),
+              _construirElementoInfo('Email', ''),
+              _construirElementoInfo('Fecha de registro', ''),
             ],
             Icons.person,
           ),
           const SizedBox(height: 20),
           
-          _buildInfoCard(
+          _construirTarjetaInfo(
             'Biografía',
             [
               const Text(
@@ -162,13 +162,13 @@ class _PerfilState extends State<Perfil> {
           ),
           const SizedBox(height: 20),
           
-          _buildInfoCard(
+          _construirTarjetaInfo(
             'Preferencias de Lectura',
             [
-              _buildPreferenceItem('Géneros favoritos', ''),
-              _buildPreferenceItem('Formato preferido', ''),
-              _buildPreferenceItem('Idiomas', ''),
-              _buildPreferenceItem('Metas de lectura', ''),
+              _construirElementoPreferencia('Géneros favoritos', ''),
+              _construirElementoPreferencia('Formato preferido', ''),
+              _construirElementoPreferencia('Idiomas', ''),
+              _construirElementoPreferencia('Metas de lectura', ''),
             ],
             Icons.favorite,
           ),
@@ -177,12 +177,12 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildInfoCard(String title, List<Widget> content, IconData icon) {
+  Widget _construirTarjetaInfo(String titulo, List<Widget> contenido, IconData icono) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -191,22 +191,22 @@ class _PerfilState extends State<Perfil> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.primary),
+              Icon(icono, size: 20, color: AppColores.primario),
               const SizedBox(width: 8),
               Text(
-                title,
+                titulo,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          ...content,
+          ...contenido,
         ],
       ),
     );
   }
 
-  Widget _buildInfoItem(String label, String value) {
+  Widget _construirElementoInfo(String etiqueta, String valor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -215,18 +215,18 @@ class _PerfilState extends State<Perfil> {
           Expanded(
             flex: 2,
             child: Text(
-              label,
+              etiqueta,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
-              value.isEmpty ? 'No especificado' : value,
+              valor.isEmpty ? 'No especificado' : valor,
               style: TextStyle(
                 fontSize: 14,
-                color: value.isEmpty ? Colors.grey : Colors.black87,
-                fontStyle: value.isEmpty ? FontStyle.italic : FontStyle.normal,
+                color: valor.isEmpty ? Colors.grey : Colors.black87,
+                fontStyle: valor.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ),
@@ -235,7 +235,7 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildPreferenceItem(String label, String value) {
+  Widget _construirElementoPreferencia(String etiqueta, String valor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -244,18 +244,18 @@ class _PerfilState extends State<Perfil> {
           Expanded(
             flex: 2,
             child: Text(
-              label,
+              etiqueta,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
-              value.isEmpty ? 'No especificado' : value,
+              valor.isEmpty ? 'No especificado' : valor,
               style: TextStyle(
                 fontSize: 14,
-                color: value.isEmpty ? Colors.grey : Colors.black87,
-                fontStyle: value.isEmpty ? FontStyle.italic : FontStyle.normal,
+                color: valor.isEmpty ? Colors.grey : Colors.black87,
+                fontStyle: valor.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ),
@@ -264,20 +264,20 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildProgresoSection() {
+  Widget _construirSeccionProgreso() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Mi Progreso de Lectura', style: AppStyles.titleMedium),
+              const Text('Mi Progreso de Lectura', style: EstilosApp.tituloMedio),
               ElevatedButton(
                 onPressed: () {},
-                style: AppStyles.primaryButton,
+                style: EstilosApp.botonPrimario,
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -295,7 +295,7 @@ class _PerfilState extends State<Perfil> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary.withOpacity(0.8), AppColors.secondary],
+                colors: [AppColores.primario.withOpacity(0.8), AppColores.secundario],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -304,15 +304,15 @@ class _PerfilState extends State<Perfil> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('0', 'Libros leídos'),
-                _buildStatItem('0', 'Páginas'),
-                _buildStatItem('0', 'Días racha'),
+                _construirElementoEstadistica('0', 'Libros leídos'),
+                _construirElementoEstadistica('0', 'Páginas'),
+                _construirElementoEstadistica('0', 'Días racha'),
               ],
             ),
           ),
           const SizedBox(height: 20),
           
-          _buildProgressCard(
+          _construirTarjetaProgreso(
             'Leyendo actualmente',
             'No hay libros en progreso',
             '0% completado',
@@ -320,7 +320,7 @@ class _PerfilState extends State<Perfil> {
           ),
           const SizedBox(height: 16),
           
-          _buildProgressCard(
+          _construirTarjetaProgreso(
             'Próximas lecturas',
             '0 libros en lista de espera',
             'Ver lista completa',
@@ -328,7 +328,7 @@ class _PerfilState extends State<Perfil> {
           ),
           const SizedBox(height: 16),
           
-          _buildProgressCard(
+          _construirTarjetaProgreso(
             'Completados este año',
             '0 libros terminados',
             'Ver historial',
@@ -339,26 +339,26 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildStatItem(String value, String label) {
+  Widget _construirElementoEstadistica(String valor, String etiqueta) {
     return Column(
       children: [
         Text(
-          value,
+          valor,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         Text(
-          label,
+          etiqueta,
           style: const TextStyle(fontSize: 12, color: Colors.white70),
         ),
       ],
     );
   }
 
-  Widget _buildProgressCard(String title, String subtitle, String status, IconData icon) {
+  Widget _construirTarjetaProgreso(String titulo, String subtitulo, String estado, IconData icono) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -367,10 +367,10 @@ class _PerfilState extends State<Perfil> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColores.primario.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: AppColors.primary),
+            child: Icon(icono, size: 20, color: AppColores.primario),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -378,12 +378,12 @@ class _PerfilState extends State<Perfil> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  titulo,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
+                  subtitulo,
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
@@ -392,12 +392,12 @@ class _PerfilState extends State<Perfil> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.1),
+              color: AppColores.secundario.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              status,
-              style: TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.w500),
+              estado,
+              style: TextStyle(fontSize: 12, color: AppColores.secundario, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -405,21 +405,21 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildEstadisticasSection() {
+  Widget _construirSeccionEstadisticas() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Estadísticas de Lectura', style: AppStyles.titleMedium),
+          const Text('Estadísticas de Lectura', style: EstilosApp.tituloMedio),
           const SizedBox(height: 20),
           
           Container(
             height: 200,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: AppColores.fondo,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade300),
             ),
@@ -439,18 +439,18 @@ class _PerfilState extends State<Perfil> {
           
           Row(
             children: [
-              Expanded(child: _buildStatCard('Géneros más leídos', 'No hay datos', Icons.category)),
+              Expanded(child: _construirTarjetaEstadistica('Géneros más leídos', 'No hay datos', Icons.category)),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Tiempo promedio', 'No hay datos', Icons.timer)),
+              Expanded(child: _construirTarjetaEstadistica('Tiempo promedio', 'No hay datos', Icons.timer)),
             ],
           ),
           const SizedBox(height: 12),
           
           Row(
             children: [
-              Expanded(child: _buildStatCard('Libros por mes', 'No hay datos', Icons.trending_up)),
+              Expanded(child: _construirTarjetaEstadistica('Libros por mes', 'No hay datos', Icons.trending_up)),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Páginas por día', 'No hay datos', Icons.menu_book)),
+              Expanded(child: _construirTarjetaEstadistica('Páginas por día', 'No hay datos', Icons.menu_book)),
             ],
           ),
         ],
@@ -458,43 +458,43 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
+  Widget _construirTarjetaEstadistica(String titulo, String valor, IconData icono) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 24, color: AppColors.primary),
+          Icon(icono, size: 24, color: AppColores.primario),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500)),
+          Text(titulo, style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
+          Text(valor, style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildConfiguracionSection() {
+  Widget _construirSeccionConfiguracion() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Configuración', style: AppStyles.titleMedium),
+          const Text('Configuración', style: EstilosApp.tituloMedio),
           const SizedBox(height: 20),
           
-          _buildSettingItem('Notificaciones', 'Gestiona las notificaciones de la app', Icons.notifications, true),
-          _buildSettingItem('Privacidad', 'Controla tu información personal', Icons.privacy_tip, false),
-          _buildSettingItem('Idioma', 'Español', Icons.language, false),
-          _buildSettingItem('Tema', 'Claro', Icons.palette, false),
-          _buildSettingItem('Sincronización', 'Última sincronización: hoy', Icons.sync, false),
-          _buildSettingItem('Ayuda y soporte', 'Centro de ayuda y contacto', Icons.help, false),
+          _construirElementoConfiguracion('Notificaciones', 'Gestiona las notificaciones de la app', Icons.notifications, true),
+          _construirElementoConfiguracion('Privacidad', 'Controla tu información personal', Icons.privacy_tip, false),
+          _construirElementoConfiguracion('Idioma', 'Español', Icons.language, false),
+          _construirElementoConfiguracion('Tema', 'Claro', Icons.palette, false),
+          _construirElementoConfiguracion('Sincronización', 'Última sincronización: hoy', Icons.sync, false),
+          _construirElementoConfiguracion('Ayuda y soporte', 'Centro de ayuda y contacto', Icons.help, false),
           const SizedBox(height: 20),
           
           Container(
@@ -543,7 +543,7 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
-  Widget _buildSettingItem(String title, String subtitle, IconData icon, bool hasSwitch) {
+  Widget _construirElementoConfiguracion(String titulo, String subtitulo, IconData icono, bool tieneSwitch) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -554,27 +554,27 @@ class _PerfilState extends State<Perfil> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColores.primario.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: AppColors.primary),
+            child: Icon(icono, size: 20, color: AppColores.primario),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
+                Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                Text(subtitulo, style: const TextStyle(fontSize: 14, color: Colors.black54)),
               ],
             ),
           ),
-          if (hasSwitch)
+          if (tieneSwitch)
             Switch(
               value: true,
-              onChanged: (value) {},
-              activeColor: AppColors.primary,
+              onChanged: (valor) {},
+              activeColor: AppColores.primario,
             )
           else
             const Icon(Icons.chevron_right, color: Colors.grey),

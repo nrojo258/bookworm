@@ -3,84 +3,84 @@ import 'package:http/http.dart' as http;
 import 'modelos.dart';
 
 class OpenLibrary {
-  static const String _baseUrl = 'https://openlibrary.org';
+  static const String _urlBase = 'https://openlibrary.org';
 
-  Future<List<Book>> searchBooks({
-    required String query,
-    String? genre,
-    int limit = 20,
+  Future<List<Libro>> buscarLibros({
+    required String consulta,
+    String? genero,
+    int limite = 20,
   }) async {
     try {
-      String searchUrl = '$_baseUrl/search.json?q=$query&limit=$limit';
+      String urlBusqueda = '$_urlBase/search.json?q=$consulta&limit=$limite';
       
-      if (genre != null && genre != 'Todos los géneros') {
-        searchUrl += '&subject=$genre';
+      if (genero != null && genero != 'Todos los géneros') {
+        urlBusqueda += '&subject=$genero';
       }
 
-      final response = await http.get(Uri.parse(searchUrl));
+      final respuesta = await http.get(Uri.parse(urlBusqueda));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final docs = data['docs'] as List?;
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        final docs = datos['docs'] as List?;
         
         if (docs == null) return [];
         
-        return docs.map((doc) => _bookFromOpenLibraryDoc(doc)).toList();
+        return docs.map((doc) => _libroDesdeDocOpenLibrary(doc)).toList();
       } else {
-        throw Exception('Error al buscar libros: ${response.statusCode}');
+        throw Exception('Error al buscar libros: ${respuesta.statusCode}');
       }
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
   }
 
-  Future<Book?> getBookDetails(String bookId) async {
+  Future<Libro?> obtenerDetallesLibro(String idLibro) async {
     try {
-      final url = Uri.parse('$_baseUrl/books/$bookId.json');
-      final response = await http.get(url);
+      final url = Uri.parse('$_urlBase/books/$idLibro.json');
+      final respuesta = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return _bookFromOpenLibraryJson(data);
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        return _libroDesdeJsonOpenLibrary(datos);
       } else {
-        throw Exception('Error al obtener detalles del libro: ${response.statusCode}');
+        throw Exception('Error al obtener detalles del libro: ${respuesta.statusCode}');
       }
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
   }
 
-  Future<List<Book>> getBooksByGenre(String genre, {int limit = 20}) async {
+  Future<List<Libro>> obtenerLibrosPorGenero(String genero, {int limite = 20}) async {
     try {
       final url = Uri.parse(
-        '$_baseUrl/subjects/${genre.toLowerCase()}.json?limit=$limit'
+        '$_urlBase/subjects/${genero.toLowerCase()}.json?limit=$limite'
       );
 
-      final response = await http.get(url);
+      final respuesta = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final works = data['works'] as List?;
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        final works = datos['works'] as List?;
         
         if (works == null) return [];
         
-        return works.map((work) => _bookFromOpenLibraryWork(work)).toList();
+        return works.map((work) => _libroDesdeWorkOpenLibrary(work)).toList();
       } else {
-        throw Exception('Error al buscar por género: ${response.statusCode}');
+        throw Exception('Error al buscar por género: ${respuesta.statusCode}');
       }
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
   }
 
-  Future<Book?> searchByISBN(String isbn) async {
+  Future<Libro?> buscarPorISBN(String isbn) async {
     try {
-      final url = Uri.parse('$_baseUrl/isbn/$isbn.json');
-      final response = await http.get(url);
+      final url = Uri.parse('$_urlBase/isbn/$isbn.json');
+      final respuesta = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return _bookFromOpenLibraryJson(data);
+      if (respuesta.statusCode == 200) {
+        final datos = json.decode(respuesta.body);
+        return _libroDesdeJsonOpenLibrary(datos);
       } else {
         return null;
       }
@@ -89,100 +89,100 @@ class OpenLibrary {
     }
   }
 
-  Book _bookFromOpenLibraryDoc(Map<String, dynamic> doc) {
-    String? thumbnailUrl;
+  Libro _libroDesdeDocOpenLibrary(Map<String, dynamic> doc) {
+    String? urlMiniatura;
     if (doc['cover_i'] != null) {
-      thumbnailUrl = 'https://covers.openlibrary.org/b/id/${doc['cover_i']}-M.jpg';
+      urlMiniatura = 'https://covers.openlibrary.org/b/id/${doc['cover_i']}-M.jpg';
     }
 
-    List<String> authors = [];
+    List<String> autores = [];
     if (doc['author_name'] != null) {
-      authors = List<String>.from(doc['author_name']);
+      autores = List<String>.from(doc['author_name']);
     }
 
-    List<String> categories = [];
+    List<String> categorias = [];
     if (doc['subject'] != null) {
-      categories = List<String>.from(doc['subject'].take(5));
+      categorias = List<String>.from(doc['subject'].take(5));
     }
 
-    return Book(
+    return Libro(
       id: doc['key'] ?? '',
-      title: doc['title'] ?? 'Título no disponible',
-      authors: authors,
-      description: _truncateDescription(doc['first_sentence'] ?? doc['description']),
-      thumbnailUrl: thumbnailUrl,
-      publishedDate: doc['first_publish_year']?.toString(),
-      pageCount: doc['number_of_pages_median'],
-      categories: categories,
-      averageRating: doc['ratings_average']?.toDouble(),
-      ratingsCount: doc['ratings_count'],
+      titulo: doc['title'] ?? 'Título no disponible',
+      autores: autores,
+      descripcion: _truncarDescripcion(doc['first_sentence'] ?? doc['description']),
+      urlMiniatura: urlMiniatura,
+      fechaPublicacion: doc['first_publish_year']?.toString(),
+      numeroPaginas: doc['number_of_pages_median'],
+      categorias: categorias,
+      calificacionPromedio: doc['ratings_average']?.toDouble(),
+      numeroCalificaciones: doc['ratings_count'],
     );
   }
 
-  Book _bookFromOpenLibraryJson(Map<String, dynamic> json) {
-    return Book(
+  Libro _libroDesdeJsonOpenLibrary(Map<String, dynamic> json) {
+    return Libro(
       id: json['key'] ?? '',
-      title: json['title'] ?? 'Título no disponible',
-      authors: _extractAuthors(json),
-      description: _truncateDescription(json['description']),
-      thumbnailUrl: _getCoverUrl(json),
-      publishedDate: _extractPublishDate(json),
-      pageCount: json['number_of_pages'],
-      categories: _extractSubjects(json),
-      averageRating: json['ratings']?['average']?.toDouble(),
-      ratingsCount: json['ratings']?['count'],
+      titulo: json['title'] ?? 'Título no disponible',
+      autores: _extraerAutores(json),
+      descripcion: _truncarDescripcion(json['description']),
+      urlMiniatura: _obtenerUrlPortada(json),
+      fechaPublicacion: _extraerFechaPublicacion(json),
+      numeroPaginas: json['number_of_pages'],
+      categorias: _extraerTemas(json),
+      calificacionPromedio: json['ratings']?['average']?.toDouble(),
+      numeroCalificaciones: json['ratings']?['count'],
     );
   }
 
-  Book _bookFromOpenLibraryWork(Map<String, dynamic> work) {
-    return Book(
+  Libro _libroDesdeWorkOpenLibrary(Map<String, dynamic> work) {
+    return Libro(
       id: work['key'] ?? '',
-      title: work['title'] ?? 'Título no disponible',
-      authors: _extractAuthorsFromWork(work),
-      description: _truncateDescription(work['description']),
-      thumbnailUrl: _getCoverUrlFromWork(work),
-      publishedDate: work['first_publish_date']?.toString().substring(0, 4),
-      categories: _extractSubjectsFromWork(work),
-      averageRating: work['rating']?.toDouble(),
+      titulo: work['title'] ?? 'Título no disponible',
+      autores: _extraerAutoresDesdeWork(work),
+      descripcion: _truncarDescripcion(work['description']),
+      urlMiniatura: _obtenerUrlPortadaDesdeWork(work),
+      fechaPublicacion: work['first_publish_date']?.toString().substring(0, 4),
+      categorias: _extraerTemasDesdeWork(work),
+      calificacionPromedio: work['rating']?.toDouble(),
     );
   }
 
-  List<String> _extractAuthors(Map<String, dynamic> json) {
+  List<String> _extraerAutores(Map<String, dynamic> json) {
     if (json['authors'] != null) {
-      final authors = json['authors'] as List;
-      return authors.map<String>((author) {
-        return author['name'] ?? 'Autor desconocido';
+      final autores = json['authors'] as List;
+      return autores.map<String>((autor) {
+        return autor['name'] ?? 'Autor desconocido';
       }).toList();
     }
     return [];
   }
 
-  List<String> _extractAuthorsFromWork(Map<String, dynamic> work) {
+  List<String> _extraerAutoresDesdeWork(Map<String, dynamic> work) {
     if (work['authors'] != null) {
-      final authors = work['authors'] as List;
-      return authors.map<String>((author) {
-        return author['name'] ?? 'Autor desconocido';
+      final autores = work['authors'] as List;
+      return autores.map<String>((autor) {
+        return autor['name'] ?? 'Autor desconocido';
       }).toList();
     }
     return [];
   }
 
-  String? _getCoverUrl(Map<String, dynamic> json) {
+  String? _obtenerUrlPortada(Map<String, dynamic> json) {
     if (json['covers'] != null && json['covers'].isNotEmpty) {
-      final coverId = json['covers'][0];
-      return 'https://covers.openlibrary.org/b/id/$coverId-M.jpg';
+      final idPortada = json['covers'][0];
+      return 'https://covers.openlibrary.org/b/id/$idPortada-M.jpg';
     }
     return null;
   }
 
-  String? _getCoverUrlFromWork(Map<String, dynamic> work) {
+  String? _obtenerUrlPortadaDesdeWork(Map<String, dynamic> work) {
     if (work['cover_id'] != null) {
       return 'https://covers.openlibrary.org/b/id/${work['cover_id']}-M.jpg';
     }
     return null;
   }
 
-  String? _extractPublishDate(Map<String, dynamic> json) {
+  String? _extraerFechaPublicacion(Map<String, dynamic> json) {
     if (json['publish_date'] != null) {
       return json['publish_date'];
     } else if (json['first_publish_date'] != null) {
@@ -191,35 +191,35 @@ class OpenLibrary {
     return null;
   }
 
-  List<String> _extractSubjects(Map<String, dynamic> json) {
+  List<String> _extraerTemas(Map<String, dynamic> json) {
     if (json['subjects'] != null) {
       return List<String>.from(json['subjects'].take(5));
     }
     return [];
   }
 
-  List<String> _extractSubjectsFromWork(Map<String, dynamic> work) {
+  List<String> _extraerTemasDesdeWork(Map<String, dynamic> work) {
     if (work['subject'] != null) {
       return List<String>.from(work['subject'].take(5));
     }
     return [];
   }
 
-  String? _truncateDescription(dynamic description) {
-    if (description == null) return null;
+  String? _truncarDescripcion(dynamic descripcion) {
+    if (descripcion == null) return null;
     
-    String descText;
-    if (description is String) {
-      descText = description;
-    } else if (description is Map) {
-      descText = description['value'] ?? '';
+    String textoDesc;
+    if (descripcion is String) {
+      textoDesc = descripcion;
+    } else if (descripcion is Map) {
+      textoDesc = descripcion['value'] ?? '';
     } else {
-      descText = description.toString();
+      textoDesc = descripcion.toString();
     }
     
-    if (descText.length > 200) {
-      return '${descText.substring(0, 200)}...';
+    if (textoDesc.length > 200) {
+      return '${textoDesc.substring(0, 200)}...';
     }
-    return descText;
+    return textoDesc;
   }
 }

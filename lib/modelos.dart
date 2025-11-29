@@ -1,43 +1,43 @@
-class Book {
+class Libro {
   final String id;
-  final String title;
-  final List<String> authors;
-  final String? description;
-  final String? thumbnailUrl;
-  final String? publishedDate;
-  final int? pageCount;
-  final List<String> categories;
-  final double? averageRating;
-  final int? ratingsCount;
+  final String titulo;
+  final List<String> autores;
+  final String? descripcion;
+  final String? urlMiniatura;
+  final String? fechaPublicacion;
+  final int? numeroPaginas;
+  final List<String> categorias;
+  final double? calificacionPromedio;
+  final int? numeroCalificaciones;
 
-  Book({
+  Libro({
     required this.id,
-    required this.title,
-    required this.authors,
-    this.description,
-    this.thumbnailUrl,
-    this.publishedDate,
-    this.pageCount,
-    this.categories = const [],
-    this.averageRating,
-    this.ratingsCount,
+    required this.titulo,
+    required this.autores,
+    this.descripcion,
+    this.urlMiniatura,
+    this.fechaPublicacion,
+    this.numeroPaginas,
+    this.categorias = const [],
+    this.calificacionPromedio,
+    this.numeroCalificaciones,
   });
 
-  factory Book.fromJson(Map<String, dynamic> json) {
-  final volumeInfo = json['volumeInfo'] ?? {};
-  final imageLinks = volumeInfo['imageLinks'] ?? {};
+  factory Libro.fromJson(Map<String, dynamic> json) {
+  final informacionVolumen = json['volumeInfo'] ?? {};
+  final enlacesImagen = informacionVolumen['imageLinks'] ?? {};
 
-  return Book(
+  return Libro(
     id: json['id'] ?? '',  
-    title: volumeInfo['title'] ?? 'Título no disponible',  
-    authors: List<String>.from(volumeInfo['authors'] ?? []), 
-    description: volumeInfo['description'], 
-    thumbnailUrl: imageLinks['thumbnail'] ?? imageLinks['smallThumbnail'],  
-    publishedDate: volumeInfo['publishedDate'],  
-    pageCount: volumeInfo['pageCount'],  
-    categories: List<String>.from(volumeInfo['categories'] ?? []), 
-    averageRating: volumeInfo['averageRating']?.toDouble(),  
-    ratingsCount: volumeInfo['ratingsCount'],  
+    titulo: informacionVolumen['title'] ?? 'Título no disponible',  
+    autores: List<String>.from(informacionVolumen['authors'] ?? []), 
+    descripcion: informacionVolumen['description'], 
+    urlMiniatura: enlacesImagen['thumbnail'] ?? enlacesImagen['smallThumbnail'],  
+    fechaPublicacion: informacionVolumen['publishedDate'],  
+    numeroPaginas: informacionVolumen['pageCount'],  
+    categorias: List<String>.from(informacionVolumen['categories'] ?? []), 
+    calificacionPromedio: informacionVolumen['averageRating']?.toDouble(),  
+    numeroCalificaciones: informacionVolumen['ratingsCount'],  
   );
 }
 }

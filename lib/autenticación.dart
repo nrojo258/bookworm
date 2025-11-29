@@ -7,106 +7,109 @@ class Autenticacion extends StatefulWidget {
   const Autenticacion({super.key});
 
   @override
-  State<Autenticacion> createState() => _AuthScreenState();
+  State<Autenticacion> createState() => _EstadoPantallaAuth();
 }
 
-class _AuthScreenState extends State<Autenticacion> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _nameController = TextEditingController();
+class _EstadoPantallaAuth extends State<Autenticacion> {
+  final _controladorEmail = TextEditingController();
+  final _controladorPassword = TextEditingController();
+  final _controladorConfirmarPassword = TextEditingController();
+  final _controladorNombre = TextEditingController();
   
-  bool _isLogin = true;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
+  bool _esLogin = true;
+  bool _passwordOculta = true;
+  bool _confirmarPasswordOculta = true;
+  bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _nameController.dispose();
+    _controladorEmail.dispose();
+    _controladorPassword.dispose();
+    _controladorConfirmarPassword.dispose();
+    _controladorNombre.dispose();
     super.dispose();
   }
 
-  void _toggleAuthMode() {
+  void _alternarModoAuth() {
     setState(() {
-      _isLogin = !_isLogin;
+      _esLogin = !_esLogin;
       ScaffoldMessenger.of(context).clearSnackBars();
     });
   }
 
-  Future<void> _submitForm() async {
-    if (!_validateForm()) return;
-    setState(() => _isLoading = true);
+  Future<void> _enviarFormulario() async {
+    if (!_validarFormulario()) return;
+    setState(() => _estaCargando = true);
 
     try {
-      _isLogin ? await _loginUser() : await _registerUser();
+      _esLogin ? await _iniciarSesionUsuario() : await _registrarUsuario();
     } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
+      _manejarErrorFirebase(e);
     } catch (e) {
-      _showSnackBar('Error inesperado: $e', Colors.red);
+      _mostrarSnackBar('Error inesperado: $e', Colors.red);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _estaCargando = false);
     }
   }
 
-  bool _validateForm() {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showSnackBar('Completa todos los campos', Colors.red);
+  bool _validarFormulario() {
+    if (_controladorEmail.text.isEmpty || _controladorPassword.text.isEmpty) {
+      _mostrarSnackBar('Completa todos los campos', Colors.red);
       return false;
     }
-    if (!_isLogin) {
-      if (_nameController.text.isEmpty) {
-        _showSnackBar('Ingresa tu nombre', Colors.red);
+    if (!_esLogin) {
+      if (_controladorNombre.text.isEmpty) {
+        _mostrarSnackBar('Ingresa tu nombre', Colors.red);
         return false;
       }
-      if (_passwordController.text != _confirmPasswordController.text) {
-        _showSnackBar('Las contraseñas no coinciden', Colors.red);
+      if (_controladorPassword.text != _controladorConfirmarPassword.text) {
+        _mostrarSnackBar('Las contraseñas no coinciden', Colors.red);
         return false;
       }
     }
-    if (_passwordController.text.length < 6) {
-      _showSnackBar('La contraseña debe tener al menos 6 caracteres', Colors.red);
+    if (_controladorPassword.text.length < 6) {
+      _mostrarSnackBar('La contraseña debe tener al menos 6 caracteres', Colors.red);
       return false;
     }
     return true;
   }
 
-  Future<void> _loginUser() async {
-    final userCredential = await _auth.signInWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
+  Future<void> _iniciarSesionUsuario() async {
+    final credencialUsuario = await _auth.signInWithEmailAndPassword(
+      email: _controladorEmail.text.trim(),
+      password: _controladorPassword.text,
     );
-    if (userCredential.user != null) {
-      _showSnackBar('¡Bienvenido de vuelta!', Colors.green);
-      _navigateToHome();
+    if (credencialUsuario.user != null) {
+      _mostrarSnackBar('¡Bienvenido de vuelta!', Colors.green);
+      _navegarAInicio();
     }
   }
 
-  Future<void> _registerUser() async {
-    final userCredential = await _auth.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
+  Future<void> _registrarUsuario() async {
+    final credencialUsuario = await _auth.createUserWithEmailAndPassword(
+      email: _controladorEmail.text.trim(),
+      password: _controladorPassword.text,
     );
 
-    if (userCredential.user != null) {
-      await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
-        'nombre': _nameController.text.trim(),
-        'correo': _emailController.text.trim(),
+    if (credencialUsuario.user != null) {
+      await _firestore.collection('usuarios').doc(credencialUsuario.user!.uid).set({
+        'nombre': _controladorNombre.text.trim(),
+        'correo': _controladorEmail.text.trim(),
         'fechaCreacion': FieldValue.serverTimestamp(),
         'preferencias': {'generos': [], 'formatos': []},
         'estadisticas': {'librosLeidos': 0, 'tiempoLectura': 0, 'rachaActual': 0}
       });
+      
+      _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
+      _navegarAInicio();
     }
   }
 
-  void _handleFirebaseError(FirebaseAuthException e) {
-    final errorMessages = {
+  void _manejarErrorFirebase(FirebaseAuthException e) {
+    final mensajesError = {
       'user-not-found': 'No existe una cuenta con este email',
       'wrong-password': 'Contraseña incorrecta',
       'email-already-in-use': 'Ya existe una cuenta con este email',
@@ -116,13 +119,13 @@ class _AuthScreenState extends State<Autenticacion> {
       'too-many-requests': 'Demasiados intentos. Intenta más tarde',
     };
     
-    _showSnackBar(errorMessages[e.code] ?? 'Error: ${e.message}', Colors.red);
+    _mostrarSnackBar(mensajesError[e.code] ?? 'Error: ${e.message}', Colors.red);
   }
 
-  void _showSnackBar(String message, Color color) {
+  void _mostrarSnackBar(String mensaje, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(mensaje),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: color == Colors.green ? 2 : 3),
@@ -130,24 +133,26 @@ class _AuthScreenState extends State<Autenticacion> {
     );
   }
 
-  void _navigateToHome() {Navigator.pushReplacementNamed(context, '/home');}
+  void _navegarAInicio() {
+    Navigator.pushReplacementNamed(context, '/home');
+  }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, 
-                        {bool obscureText = false, VoidCallback? onToggleVisibility}) {
+  Widget _construirCampoTexto(TextEditingController controlador, String etiqueta, IconData icono, 
+                        {bool textoOculto = false, VoidCallback? alAlternarVisibilidad}) {
     return TextFormField(
-      controller: controller,
+      controller: controlador,
       decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        suffixIcon: onToggleVisibility != null ? IconButton(
-          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
-          onPressed: onToggleVisibility,
+        labelText: etiqueta,
+        prefixIcon: Icon(icono, color: AppColores.primario),
+        suffixIcon: alAlternarVisibilidad != null ? IconButton(
+          icon: Icon(textoOculto ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+          onPressed: alAlternarVisibilidad,
         ) : null,
         border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColores.primario)),
       ),
-      obscureText: obscureText,
-      enabled: !_isLoading,
+      obscureText: textoOculto,
+      enabled: !_estaCargando,
     );
   }
 
@@ -157,7 +162,7 @@ class _AuthScreenState extends State<Autenticacion> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
+            colors: [AppColores.primario, AppColores.secundario],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -179,37 +184,37 @@ class _AuthScreenState extends State<Autenticacion> {
                     children: [
                       const CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColores.primario,
                         child: Icon(Icons.menu_book_rounded, size: 50, color: Colors.white),
                       ),
                       const SizedBox(height: 20),
-                      Text(_isLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: AppStyles.titleMedium),
+                      Text(_esLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: EstilosApp.tituloMedio),
                       const SizedBox(height: 10),
                       Text(
-                        _isLogin ? 'Bienvenido de vuelta' : 'Únete a nuestra comunidad',
-                        style: AppStyles.bodyMedium,
+                        _esLogin ? 'Bienvenido de vuelta' : 'Únete a nuestra comunidad',
+                        style: EstilosApp.cuerpoMedio,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 30),
                       
-                      if (!_isLogin) ...[
-                        _buildTextField(_nameController, 'Nombre', Icons.person),
+                      if (!_esLogin) ...[
+                        _construirCampoTexto(_controladorNombre, 'Nombre', Icons.person),
                         const SizedBox(height: 15),
                       ],
                       
-                      _buildTextField(_emailController, 'Correo electrónico', Icons.email),
+                      _construirCampoTexto(_controladorEmail, 'Correo electrónico', Icons.email),
                       const SizedBox(height: 15),
                       
-                      _buildTextField(_passwordController, 'Contraseña', Icons.lock,
-                        obscureText: _obscurePassword,
-                        onToggleVisibility: _isLoading ? null : () => setState(() => _obscurePassword = !_obscurePassword),
+                      _construirCampoTexto(_controladorPassword, 'Contraseña', Icons.lock,
+                        textoOculto: _passwordOculta,
+                        alAlternarVisibilidad: _estaCargando ? null : () => setState(() => _passwordOculta = !_passwordOculta),
                       ),
                       const SizedBox(height: 15),
                       
-                      if (!_isLogin) ...[
-                        _buildTextField(_confirmPasswordController, 'Confirmar contraseña', Icons.lock_outline,
-                          obscureText: _obscureConfirmPassword,
-                          onToggleVisibility: _isLoading ? null : () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      if (!_esLogin) ...[
+                        _construirCampoTexto(_controladorConfirmarPassword, 'Confirmar contraseña', Icons.lock_outline,
+                          textoOculto: _confirmarPasswordOculta,
+                          alAlternarVisibilidad: _estaCargando ? null : () => setState(() => _confirmarPasswordOculta = !_confirmarPasswordOculta),
                         ),
                         const SizedBox(height: 15),
                       ],
@@ -217,15 +222,15 @@ class _AuthScreenState extends State<Autenticacion> {
                       SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
+                        child: _estaCargando
+                            ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario)))
                             : ElevatedButton(
-                                onPressed: _submitForm,
-                                style: AppStyles.primaryButton,
-                                child: Text(_isLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                onPressed: _enviarFormulario,
+                                style: EstilosApp.botonPrimario,
+                                child: Text(_esLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               ),
                       ),
-                      if (!_isLoading) ..._buildAuthFooter(),
+                      if (!_estaCargando) ..._construirPieAuth(),
                     ],
                   ),
                 ),
@@ -237,7 +242,7 @@ class _AuthScreenState extends State<Autenticacion> {
     );
   }
 
-  List<Widget> _buildAuthFooter() {
+  List<Widget> _construirPieAuth() {
     return [
       const SizedBox(height: 20),
       const Row(children: [
@@ -249,13 +254,13 @@ class _AuthScreenState extends State<Autenticacion> {
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(_isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?', style: AppStyles.bodyMedium),
+          Text(_esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?', style: EstilosApp.cuerpoMedio),
           const SizedBox(width: 5),
           GestureDetector(
-            onTap: _isLoading ? null : _toggleAuthMode,
+            onTap: _estaCargando ? null : _alternarModoAuth,
             child: Text(
-              _isLogin ? 'Regístrate' : 'Inicia Sesión',
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+              _esLogin ? 'Regístrate' : 'Inicia Sesión',
+              style: const TextStyle(color: AppColores.primario, fontWeight: FontWeight.bold),
             ),
           ),
         ],

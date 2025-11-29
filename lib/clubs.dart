@@ -10,35 +10,35 @@ class Clubs extends StatefulWidget {
 }
 
 class _ClubsState extends State<Clubs> {
-  final TextEditingController _searchController = TextEditingController();
-  int _selectedSection = 0;
+  final TextEditingController _controladorBusqueda = TextEditingController();
+  int _seccionSeleccionada = 0;
   String? _generoSeleccionado;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _controladorBusqueda.dispose();
     super.dispose();
   }
 
   void _mostrarCrearClub() {
-    final nombreController = TextEditingController();
+    final controladorNombre = TextEditingController();
     
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Crear Nuevo Club', style: AppStyles.titleMedium),
+          title: const Text('Crear Nuevo Club', style: EstilosApp.tituloMedio),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Completa la información del club', style: AppStyles.bodyMedium),
+                const Text('Completa la información del club', style: EstilosApp.cuerpoMedio),
                 const SizedBox(height: 20),
                 TextFormField(
-                  controller: nombreController,
+                  controller: controladorNombre,
                   decoration: const InputDecoration(
                     labelText: 'Nombre del club', 
-                    prefixIcon: Icon(Icons.group, color: AppColors.primary)
+                    prefixIcon: Icon(Icons.group, color: AppColores.primario)
                   ),
                   maxLength: 50,
                 ),
@@ -48,11 +48,11 @@ class _ClubsState extends State<Clubs> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                 ),
                 const SizedBox(height: 10),
-                DropdownFilter(
-                  value: _generoSeleccionado,
-                  items: AppData.generos,
+                FiltroDesplegable(
+                  valor: _generoSeleccionado,
+                  items: DatosApp.generos,
                   hint: 'Selecciona un género',
-                  onChanged: (value) => setState(() => _generoSeleccionado = value),
+                  alCambiar: (valor) => setState(() => _generoSeleccionado = valor),
                 ),
               ],
             ),
@@ -63,11 +63,11 @@ class _ClubsState extends State<Clubs> {
               child: const Text('Cancelar')
             ),
             ElevatedButton(
-              onPressed: nombreController.text.isEmpty || _generoSeleccionado == null ? null : () {
-                _crearClub(nombreController.text, _generoSeleccionado!);
+              onPressed: controladorNombre.text.isEmpty || _generoSeleccionado == null ? null : () {
+                _crearClub(controladorNombre.text, _generoSeleccionado!);
                 Navigator.pop(context);
               },
-              style: AppStyles.primaryButton,
+              style: EstilosApp.botonPrimario,
               child: const Text('Crear Club'),
             ),
           ],
@@ -80,7 +80,7 @@ class _ClubsState extends State<Clubs> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Club "$nombre" creado exitosamente'),
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColores.secundario,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -90,12 +90,12 @@ class _ClubsState extends State<Clubs> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColores.fondo,
       appBar: AppBar(
-        title: const Text('BookWorm', style: AppStyles.titleLarge),
-        backgroundColor: AppColors.primary,
+        title: const Text('BookWorm', style: EstilosApp.tituloGrande),
+        backgroundColor: AppColores.primario,
         automaticallyImplyLeading: false,
-        actions: const [AppBarButtons(currentRoute: '/clubs')],
+        actions: const [BotonesBarraApp(rutaActual: '/clubs')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -103,17 +103,17 @@ class _ClubsState extends State<Clubs> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: AppStyles.cardDecoration,
+              decoration: EstilosApp.decoracionTarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Clubs de lectura', style: AppStyles.titleMedium),
+                      const Text('Clubs de lectura', style: EstilosApp.tituloMedio),
                       ElevatedButton(
                         onPressed: _mostrarCrearClub,
-                        style: AppStyles.primaryButton,
+                        style: EstilosApp.botonPrimario,
                         child: const Row(children: [
                           Icon(Icons.add, size: 18),
                           SizedBox(width: 4),
@@ -125,13 +125,13 @@ class _ClubsState extends State<Clubs> {
                   const SizedBox(height: 8),
                   const Text(
                     'Descubre y únete a clubs con intereses similares', 
-                    style: AppStyles.bodyMedium
+                    style: EstilosApp.cuerpoMedio
                   ),
                   const SizedBox(height: 20),
-                  CustomSearchBar(
-                    controller: _searchController,
-                    hintText: 'Buscar clubs...',
-                    onSearch: () {},
+                  BarraBusquedaPersonalizada(
+                    controlador: _controladorBusqueda,
+                    textoHint: 'Buscar clubs...',
+                    alBuscar: () {},
                   ),
                 ],
               ),
@@ -140,68 +140,68 @@ class _ClubsState extends State<Clubs> {
 
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: AppStyles.cardDecoration,
+              decoration: EstilosApp.decoracionTarjeta,
               child: Row(children: [
-                Expanded(child: SectionButton(
-                  text: 'Descubrir clubs',
-                  isSelected: _selectedSection == 0,
-                  icon: Icons.explore,
-                  onPressed: () => setState(() => _selectedSection = 0),
+                Expanded(child: BotonSeccion(
+                  texto: 'Descubrir clubs',
+                  estaSeleccionado: _seccionSeleccionada == 0,
+                  icono: Icons.explore,
+                  alPresionar: () => setState(() => _seccionSeleccionada = 0),
                 )),
                 const SizedBox(width: 12),
-                Expanded(child: SectionButton(
-                  text: 'Mis clubs',
-                  isSelected: _selectedSection == 1,
-                  icon: Icons.group,
-                  onPressed: () => setState(() => _selectedSection = 1),
+                Expanded(child: BotonSeccion(
+                  texto: 'Mis clubs',
+                  estaSeleccionado: _seccionSeleccionada == 1,
+                  icono: Icons.group,
+                  alPresionar: () => setState(() => _seccionSeleccionada = 1),
                 )),
               ]),
             ),
             const SizedBox(height: 20),
 
-            _selectedSection == 0 ? _buildDiscoverClubs() : _buildMyClubs(),
+            _seccionSeleccionada == 0 ? _construirDescubrirClubs() : _construirMisClubs(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDiscoverClubs() {
+  Widget _construirDescubrirClubs() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Clubs recomendados', style: AppStyles.titleMedium),
+          Text('Clubs recomendados', style: EstilosApp.tituloMedio),
           SizedBox(height: 16),
-          Text('Explora clubs basados en tus intereses', style: AppStyles.bodyMedium),
+          Text('Explora clubs basados en tus intereses', style: EstilosApp.cuerpoMedio),
           SizedBox(height: 20),
-          EmptyState(
-            icon: Icons.group,
-            title: 'No se encontraron clubs',
-            description: 'Intenta con otros términos de búsqueda',
+          EstadoVacio(
+            icono: Icons.group,
+            titulo: 'No se encontraron clubs',
+            descripcion: 'Intenta con otros términos de búsqueda',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMyClubs() {
+  Widget _construirMisClubs() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: AppStyles.cardDecoration,
+      decoration: EstilosApp.decoracionTarjeta,
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Mis clubs activos', style: AppStyles.titleMedium),
+          Text('Mis clubs activos', style: EstilosApp.tituloMedio),
           SizedBox(height: 16),
-          Text('Gestiona tus clubs de lectura actuales', style: AppStyles.bodyMedium),
+          Text('Gestiona tus clubs de lectura actuales', style: EstilosApp.cuerpoMedio),
           SizedBox(height: 20),
-          EmptyState(
-            icon: Icons.group_add,
-            title: 'No tienes clubs activos',
-            description: 'Únete a un club o crea uno nuevo',
+          EstadoVacio(
+            icono: Icons.group_add,
+            titulo: 'No tienes clubs activos',
+            descripcion: 'Únete a un club o crea uno nuevo',
           ),
         ],
       ),

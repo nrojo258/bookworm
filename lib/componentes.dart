@@ -1,47 +1,47 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 
-class AppBarButtons extends StatelessWidget {
-  final String currentRoute;
+class BotonesBarraApp extends StatelessWidget {
+  final String rutaActual;
 
-  const AppBarButtons({
+  const BotonesBarraApp({
     super.key,
-    required this.currentRoute,
+    required this.rutaActual,
   });
 
   @override
   Widget build(BuildContext context) {
-    final routes = {
-      'Home': {'route': '/home', 'icon': Icons.home},
-      'Buscar': {'route': '/search', 'icon': Icons.search},
-      'Clubs': {'route': '/clubs', 'icon': Icons.group},
-      'Perfil': {'route': '/perfil', 'icon': Icons.person},
+    final rutas = {
+      'Inicio': {'ruta': '/home', 'icono': Icons.home},
+      'Buscar': {'ruta': '/search', 'icono': Icons.search},
+      'Clubs': {'ruta': '/clubs', 'icono': Icons.group},
+      'Perfil': {'ruta': '/perfil', 'icono': Icons.person},
     };
 
     return Row(children: [
-      ...routes.entries.map((e) => _buildAppBarButton(
+      ...rutas.entries.map((e) => _construirBotonBarraApp(
         context, 
         e.key, 
-        e.value['route'] as String, 
-        e.value['icon'] as IconData
+        e.value['ruta'] as String, 
+        e.value['icono'] as IconData
       )),
       const SizedBox(width: 8), 
     ]);
   }
 
-  Widget _buildAppBarButton(BuildContext context, String text, String route, IconData icon) {
-    final isActive = currentRoute == route;
+  Widget _construirBotonBarraApp(BuildContext context, String texto, String ruta, IconData icono) {
+    final estaActivo = rutaActual == ruta;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: TextButton(
         onPressed: () {
-          if (ModalRoute.of(context)?.settings.name != route) {
-            Navigator.pushReplacementNamed(context, route);
+          if (ModalRoute.of(context)?.settings.name != ruta) {
+            Navigator.pushReplacementNamed(context, ruta);
           }
         },
         style: TextButton.styleFrom(
-          foregroundColor: isActive ? Colors.white : Colors.white70,
-          backgroundColor: isActive ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          foregroundColor: estaActivo ? Colors.white : Colors.white70,
+          backgroundColor: estaActivo ? Colors.white.withOpacity(0.2) : Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -51,16 +51,16 @@ class AppBarButtons extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              icon,
+              icono,
               size: 18,
-              color: isActive ? Colors.white : Colors.white70,
+              color: estaActivo ? Colors.white : Colors.white70,
             ),
             const SizedBox(width: 6),
             Text(
-              text,
+              texto,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                fontWeight: estaActivo ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
@@ -70,31 +70,31 @@ class AppBarButtons extends StatelessWidget {
   }
 }
 
-class SectionButton extends StatelessWidget {
-  final String text;
-  final bool isSelected;
-  final IconData icon;
-  final VoidCallback onPressed;
+class BotonSeccion extends StatelessWidget {
+  final String texto;
+  final bool estaSeleccionado;
+  final IconData icono;
+  final VoidCallback alPresionar;
 
-  const SectionButton({
+  const BotonSeccion({
     super.key,
-    required this.text,
-    required this.isSelected,
-    required this.icon,
-    required this.onPressed,
+    required this.texto,
+    required this.estaSeleccionado,
+    required this.icono,
+    required this.alPresionar,
   });
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: alPresionar,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? AppColors.primary : Colors.transparent,
-        foregroundColor: isSelected ? Colors.white : AppColors.primary,
+        backgroundColor: estaSeleccionado ? AppColores.primario : Colors.transparent,
+        foregroundColor: estaSeleccionado ? Colors.white : AppColores.primario,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            color: estaSeleccionado ? AppColores.primario : Colors.grey.shade300,
           ),
         ),
         elevation: 0,
@@ -103,25 +103,25 @@ class SectionButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18),
+          Icon(icono, size: 18),
           const SizedBox(width: 8),
-          Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 }
 
-class EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
+class EstadoVacio extends StatelessWidget {
+  final IconData icono;
+  final String titulo;
+  final String descripcion;
 
-  const EmptyState({
+  const EstadoVacio({
     super.key,
-    required this.icon,
-    required this.title,
-    required this.description,
+    required this.icono,
+    required this.titulo,
+    required this.descripcion,
   });
 
   @override
@@ -129,17 +129,17 @@ class EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 48, color: Colors.grey),
+            Icon(icono, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            Text(titulo, style: const TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 8),
-            Text(description, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(descripcion, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
       ),
@@ -147,16 +147,16 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-class CustomSearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final VoidCallback onSearch;
+class BarraBusquedaPersonalizada extends StatelessWidget {
+  final TextEditingController controlador;
+  final String textoHint;
+  final VoidCallback alBuscar;
 
-  const CustomSearchBar({
+  const BarraBusquedaPersonalizada({
     super.key,
-    required this.controller,
-    required this.hintText,
-    required this.onSearch,
+    required this.controlador,
+    required this.textoHint,
+    required this.alBuscar,
   });
 
   @override
@@ -167,18 +167,18 @@ class CustomSearchBar extends StatelessWidget {
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: AppColores.fondo,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: TextField(
-              controller: controller,
+              controller: controlador,
               decoration: InputDecoration(
-                hintText: hintText,
+                hintText: textoHint,
                 hintStyle: const TextStyle(fontSize: 16, color: Colors.black54),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                prefixIcon: const Icon(Icons.search, color: AppColores.primario),
               ),
               style: const TextStyle(fontSize: 16, color: Colors.black),
             ),
@@ -188,8 +188,8 @@ class CustomSearchBar extends StatelessWidget {
         SizedBox(
           height: 50,
           child: ElevatedButton(
-            onPressed: onSearch,
-            style: AppStyles.primaryButton,
+            onPressed: alBuscar,
+            style: EstilosApp.botonPrimario,
             child: const Text('Buscar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
@@ -198,18 +198,18 @@ class CustomSearchBar extends StatelessWidget {
   }
 }
 
-class DropdownFilter extends StatelessWidget {
-  final String? value;
+class FiltroDesplegable extends StatelessWidget {
+  final String? valor;
   final List<String> items;
   final String hint;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?> alCambiar;
 
-  const DropdownFilter({
+  const FiltroDesplegable({
     super.key,
-    required this.value,
+    required this.valor,
     required this.items,
     required this.hint,
-    required this.onChanged,
+    required this.alCambiar,
   });
 
   @override
@@ -217,23 +217,23 @@ class DropdownFilter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value,
+          value: valor,
           isExpanded: true,
           hint: Text(hint),
           dropdownColor: Colors.white,
           style: const TextStyle(color: Colors.black, fontSize: 16),
-          icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
-          items: items.map((value) => DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
+          icon: const Icon(Icons.arrow_drop_down, color: AppColores.primario),
+          items: items.map((valor) => DropdownMenuItem<String>(
+            value: valor,
+            child: Text(valor),
           )).toList(),
-          onChanged: onChanged,
+          onChanged: alCambiar,
         ),
       ),
     );

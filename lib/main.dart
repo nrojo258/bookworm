@@ -11,11 +11,11 @@ import 'componentes.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const BookWormApp());
+  runApp(const AppBookWorm());
 }
 
-class BookWormApp extends StatelessWidget {
-  const BookWormApp({super.key});
+class AppBookWorm extends StatelessWidget {
+  const AppBookWorm({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,19 +23,19 @@ class BookWormApp extends StatelessWidget {
       title: 'BookWorm',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: AppColors.primary,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-        scaffoldBackgroundColor: AppColors.background,
+        primaryColor: AppColores.primario,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColores.primario),
+        scaffoldBackgroundColor: AppColores.fondo,
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary, 
+          backgroundColor: AppColores.primario, 
           foregroundColor: Colors.white,
           elevation: 0,
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(style: AppStyles.primaryButton),
+        elevatedButtonTheme: ElevatedButtonThemeData(style: EstilosApp.botonPrimario),
       ),
       routes: {
         '/': (context) => const Autenticacion(),
-        '/home': (context) => const BookWormHomePage(),
+        '/home': (context) => const PaginaInicioBookWorm(),
         '/search': (context) => const Buscar(),
         '/clubs': (context) => const Clubs(),
         '/perfil': (context) => const Perfil(),
@@ -45,8 +45,8 @@ class BookWormApp extends StatelessWidget {
   }
 }
 
-class BookWormHomePage extends StatelessWidget {
-  const BookWormHomePage({super.key});
+class PaginaInicioBookWorm extends StatelessWidget {
+  const PaginaInicioBookWorm({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +56,9 @@ class BookWormHomePage extends StatelessWidget {
           onTap: () {
             Navigator.pushReplacementNamed(context, '/home');
           },
-          child: const Text('BookWorm', style: AppStyles.titleLarge),
+          child: const Text('BookWorm', style: EstilosApp.tituloGrande),
         ),
-        actions: const [AppBarButtons(currentRoute: '/home')],
+        actions: const [BotonesBarraApp(rutaActual: '/home')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -69,7 +69,7 @@ class BookWormHomePage extends StatelessWidget {
               height: 180,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
+                  colors: [AppColores.primario, AppColores.secundario],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -109,13 +109,13 @@ class BookWormHomePage extends StatelessWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            _buildBannerButton(
+                            _construirBotonBanner(
                               'Buscar libros', 
                               Icons.search, 
                               () => Navigator.pushNamed(context, '/search')
                             ),
                             const SizedBox(width: 12),
-                            _buildBannerButton(
+                            _construirBotonBanner(
                               'Ver progreso', 
                               Icons.trending_up, 
                               () => Navigator.pushNamed(context, '/perfil')
@@ -137,13 +137,13 @@ class BookWormHomePage extends StatelessWidget {
             
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: AppStyles.cardDecoration,
+              decoration: EstilosApp.decoracionTarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Acceso rápido',
-                    style: AppStyles.titleMedium,
+                    style: EstilosApp.tituloMedio,
                   ),
                   const SizedBox(height: 16),
                   GridView.builder(
@@ -157,16 +157,16 @@ class BookWormHomePage extends StatelessWidget {
                     ),
                     itemCount: 4,
                     itemBuilder: (BuildContext context, int index) {
-                      final List<Map<String, dynamic>> quickActions = [
-                        {'icon': Icons.menu_book, 'label': 'Libros leídos'},
-                        {'icon': Icons.flag, 'label': 'Meta semanal'},
-                        {'icon': Icons.access_time, 'label': 'Tiempo leído'},
-                        {'icon': Icons.local_fire_department, 'label': 'Días de racha'},
+                      final List<Map<String, dynamic>> accionesRapidas = [
+                        {'icono': Icons.menu_book, 'etiqueta': 'Libros leídos'},
+                        {'icono': Icons.flag, 'etiqueta': 'Meta semanal'},
+                        {'icono': Icons.access_time, 'etiqueta': 'Tiempo leído'},
+                        {'icono': Icons.local_fire_department, 'etiqueta': 'Días de racha'},
                       ];
                       
                       return Container(
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColores.fondo,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
@@ -174,13 +174,13 @@ class BookWormHomePage extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              quickActions[index]['icon'],
+                              accionesRapidas[index]['icono'],
                               size: 32,
-                              color: AppColors.primary,
+                              color: AppColores.primario,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              quickActions[index]['label'],
+                              accionesRapidas[index]['etiqueta'],
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -206,7 +206,7 @@ class BookWormHomePage extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: AppStyles.cardDecoration,
+                    decoration: EstilosApp.decoracionTarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -240,7 +240,7 @@ class BookWormHomePage extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: AppStyles.cardDecoration,
+                    decoration: EstilosApp.decoracionTarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -276,9 +276,9 @@ class BookWormHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBannerButton(String text, IconData icon, VoidCallback onPressed) {
+  Widget _construirBotonBanner(String texto, IconData icono, VoidCallback alPresionar) {
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: alPresionar,
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white.withOpacity(0.2),
         foregroundColor: Colors.white,
@@ -292,10 +292,10 @@ class BookWormHomePage extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16),
+          Icon(icono, size: 16),
           const SizedBox(width: 6),
           Text(
-            text,
+            texto,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,

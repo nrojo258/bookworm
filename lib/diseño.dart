@@ -1,41 +1,41 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  static const Color primary = Color(0xFF7E57C2);
-  static const Color secondary = Color(0xFF26A69A);
-  static const Color background = Color(0xFFF8F9FA);
-  static const Color white = Colors.white;
-  static const Color black87 = Colors.black87;
-  static const Color black54 = Colors.black54;
-  static const Color grey = Colors.grey;
+class AppColores {
+  static const Color primario = Color(0xFF7E57C2);
+  static const Color secundario = Color(0xFF26A69A);
+  static const Color fondo = Color(0xFFF8F9FA);
+  static const Color blanco = Colors.white;
+  static const Color negro87 = Colors.black87;
+  static const Color negro54 = Colors.black54;
+  static const Color gris = Colors.grey;
 }
 
-class AppStyles {
-  static const TextStyle titleLarge = TextStyle(
+class EstilosApp {
+  static const TextStyle tituloGrande = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: Colors.white,
   );
   
-  static const TextStyle titleMedium = TextStyle(
+  static const TextStyle tituloMedio = TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.bold,
     color: Colors.black87,
   );
   
-  static const TextStyle bodyMedium = TextStyle(
+  static const TextStyle cuerpoMedio = TextStyle(
     fontSize: 14,
     color: Colors.black54,
   );
   
-  static ButtonStyle primaryButton = ElevatedButton.styleFrom(
-    backgroundColor: AppColors.primary,
+  static ButtonStyle botonPrimario = ElevatedButton.styleFrom(
+    backgroundColor: AppColores.primario,
     foregroundColor: Colors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 3,
   );
   
-  static BoxDecoration cardDecoration = BoxDecoration(
+  static BoxDecoration decoracionTarjeta = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(16),
     boxShadow: [
@@ -48,7 +48,7 @@ class AppStyles {
   );
 }
 
-class AppData {
+class DatosApp {
   static const List<String> formatos = ['Todos los formatos', 'Libro físico', 'Audiolibro'];
   static const List<String> generos = [
     'Todos los géneros', 'Ficción', 'Thriller', 'Ciencia Ficción', 'Biografía', 'Romance', 'Fantasía',
