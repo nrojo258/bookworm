@@ -41,7 +41,8 @@ dependencies:
   
   # Agregar estas dependencias para la API de Google Books
   http: ^1.1.0
-  flutter_dotenv: ^5.1.0  # Para manejar variables de entorno de forma segura
+  flutter_dotenv: ^5.1.0  
+  provider: ^6.1.1
 
 dev_dependencies:
   flutter_test:

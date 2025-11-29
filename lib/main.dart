@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'auth_screen.dart';
+import 'autenticación.dart';
 import 'buscar.dart';
 import 'clubs.dart';
 import 'perfil.dart';
@@ -34,7 +34,7 @@ class BookWormApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(style: AppStyles.primaryButton),
       ),
       routes: {
-        '/': (context) => const AuthScreen(),
+        '/': (context) => const Autenticacion(),
         '/home': (context) => const BookWormHomePage(),
         '/search': (context) => const Buscar(),
         '/clubs': (context) => const Clubs(),

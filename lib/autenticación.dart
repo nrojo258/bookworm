@@ -3,14 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'diseño.dart';
 
-class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+class Autenticacion extends StatefulWidget {
+  const Autenticacion({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  State<Autenticacion> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<Autenticacion> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -95,15 +95,13 @@ class _AuthScreenState extends State<AuthScreen> {
     );
 
     if (userCredential.user != null) {
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'preferences': {'genres': [], 'formats': []},
-        'stats': {'booksRead': 0, 'readingTime': 0, 'currentStreak': 0}
+      await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
+        'nombre': _nameController.text.trim(),
+        'correo': _emailController.text.trim(),
+        'fechaCreacion': FieldValue.serverTimestamp(),
+        'preferencias': {'generos': [], 'formatos': []},
+        'estadisticas': {'librosLeidos': 0, 'tiempoLectura': 0, 'rachaActual': 0}
       });
-      _showSnackBar('¡Cuenta creada!', Colors.green);
-      _navigateToHome();
     }
   }
 
