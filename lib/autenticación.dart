@@ -115,14 +115,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         generosFavoritos: [],
       );
 
-      try {
-        final servicioFirestore = ServicioFirestore();
-        await servicioFirestore.crearUsuario(datosUsuario);
-        _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
-        _navegarAInicio();
-      } catch (e) {
-        _mostrarSnackBar('Error al guardar datos: $e', Colors.red);
-      }
     }
   } 
 

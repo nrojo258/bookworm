@@ -18,34 +18,7 @@ class _PerfilState extends State<Perfil> {
   final ServicioFirestore _servicioFirestore = ServicioFirestore();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  @override
-  void initState() {
-    super.initState();
-    _cargarDatosUsuario();
-  }
-
-  Future<void> _cargarDatosUsuario() async {
-    final usuario = _auth.currentUser;
-    if (usuario != null) {
-      try {
-        final datosUsuario = await _servicioFirestore.obtenerDatosUsuario(usuario.uid);
-        setState(() {
-          _datosUsuario = datosUsuario;
-          _estaCargando = false;
-        });
-      } catch (e) {
-        print('Error cargando datos: $e');
-        setState(() {
-          _estaCargando = false;
-        });
-      }
-    } else {
-      setState(() {
-        _estaCargando = false;
-      });
-    }
-  }
-
+  
   Widget _construirEncabezadoPerfil() {
     if (_estaCargando) {
       return Container(

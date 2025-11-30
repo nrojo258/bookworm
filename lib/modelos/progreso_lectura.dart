@@ -30,49 +30,4 @@ class ProgresoLectura {
     this.calificacion = 0.0,
     this.resena,
   });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'usuarioId': usuarioId,
-      'libroId': libroId,
-      'tituloLibro': tituloLibro,
-      'autoresLibro': autoresLibro,
-      'miniaturaLibro': miniaturaLibro,
-      'estado': estado,
-      'paginaActual': paginaActual,
-      'paginasTotales': paginasTotales,
-      'fechaInicio': Timestamp.fromDate(fechaInicio),
-      'fechaCompletado': fechaCompletado != null ? Timestamp.fromDate(fechaCompletado!) : null,
-      'calificacion': calificacion,
-      'reseña': resena,
-    };
-  }
-
-  factory ProgresoLectura.fromMap(Map<String, dynamic> map) {
-    return ProgresoLectura(
-      id: map['id'] ?? '',
-      usuarioId: map['usuarioId'] ?? '',
-      libroId: map['libroId'] ?? '',
-      tituloLibro: map['tituloLibro'] ?? '',
-      autoresLibro: List<String>.from(map['autoresLibro'] ?? []),
-      miniaturaLibro: map['miniaturaLibro'],
-      estado: map['estado'] ?? 'por_leer',
-      paginaActual: map['paginaActual'] ?? 0,
-      paginasTotales: map['paginasTotales'] ?? 0,
-      fechaInicio: (map['fechaInicio'] as Timestamp).toDate(),
-      fechaCompletado: map['fechaCompletado'] != null 
-          ? (map['fechaCompletado'] as Timestamp).toDate() 
-          : null,
-      calificacion: (map['calificacion'] ?? 0.0).toDouble(),
-      resena: map['reseña'],
-    );
-  }
-
-  double get porcentajeProgreso {
-    if (paginasTotales == 0) return 0.0;
-    return (paginaActual / paginasTotales * 100).clamp(0.0, 100.0);
-  }
-
-  bool get estaCompletado => estado == 'completado';
 }
