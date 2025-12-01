@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import 'modelos.dart';
-import 'open_library.dart';
+import 'API/modelos.dart';
+import 'API/open_library.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
