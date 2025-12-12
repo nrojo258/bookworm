@@ -34,15 +34,38 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # Firebase Core
   firebase_core: ^3.7.1
+  
+  # Firebase Services
   cloud_firestore: ^5.0.1
   firebase_auth: ^5.0.1
+  
+  # Google Fonts
   google_fonts: ^6.1.0
   
-  # Agregar estas dependencias para la API de Google Books
+  # Google Books API y funcionalidades
   http: ^1.1.0
   flutter_dotenv: ^5.1.0  
   provider: ^6.1.1
+  
+  # Almacenamiento local
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Conectividad
+  connectivity_plus: ^5.0.2
+  
+  # Gráficos
+  fl_chart: ^0.66.0
+  
+  # Internacionalización
+  intl: ^0.18.1
+  
+  # UI y Caché
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

@@ -22,11 +22,12 @@ class _ClubsState extends State<Clubs> {
 
   void _mostrarCrearClub() {
     final controladorNombre = TextEditingController();
+    String? generoDialogo; 
     
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setStateDialog) => AlertDialog(
           title: const Text('Crear Nuevo Club', style: EstilosApp.tituloMedio),
           content: SingleChildScrollView(
             child: Column(
@@ -49,10 +50,14 @@ class _ClubsState extends State<Clubs> {
                 ),
                 const SizedBox(height: 10),
                 FiltroDesplegable(
-                  valor: _generoSeleccionado,
+                  valor: generoDialogo,
                   items: DatosApp.generos,
                   hint: 'Selecciona un género',
-                  alCambiar: (valor) => setState(() => _generoSeleccionado = valor),
+                  alCambiar: (valor) {
+                    setStateDialog(() {
+                      generoDialogo = valor;
+                    });
+                  },
                 ),
               ],
             ),
@@ -63,8 +68,8 @@ class _ClubsState extends State<Clubs> {
               child: const Text('Cancelar')
             ),
             ElevatedButton(
-              onPressed: controladorNombre.text.isEmpty || _generoSeleccionado == null ? null : () {
-                _crearClub(controladorNombre.text, _generoSeleccionado!);
+              onPressed: controladorNombre.text.isEmpty || generoDialogo == null ? null : () {
+                _crearClub(controladorNombre.text, generoDialogo!);
                 Navigator.pop(context);
               },
               style: EstilosApp.botonPrimario,

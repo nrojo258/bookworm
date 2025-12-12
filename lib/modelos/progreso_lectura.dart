@@ -45,7 +45,7 @@ class ProgresoLectura {
       'fechaInicio': Timestamp.fromDate(fechaInicio),
       'fechaCompletado': fechaCompletado != null ? Timestamp.fromDate(fechaCompletado!) : null,
       'calificacion': calificacion,
-      'reseña': resena,
+      'resena': resena,
     };
   }
 
@@ -65,7 +65,7 @@ class ProgresoLectura {
           ? (map['fechaCompletado'] as Timestamp).toDate()
           : null,
       calificacion: (map['calificacion'] ?? 0.0).toDouble(),
-      resena: map['reseña'],
+      resena: map['resena'],
     );
   }
 

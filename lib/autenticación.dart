@@ -106,12 +106,14 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
           'formatos': ['fisico', 'audio'],
           'notificaciones': true,
         },
+
         estadisticas: {
           'librosLeidos': 0,
           'tiempoLectura': 0, 
           'rachaActual': 0, 
           'paginasTotales': 0,
         },
+        
         generosFavoritos: [],
       );
 

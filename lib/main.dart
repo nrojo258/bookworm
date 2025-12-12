@@ -7,6 +7,9 @@ import 'clubs.dart';
 import 'perfil.dart';
 import 'diseño.dart';
 import 'componentes.dart';
+import 'chat_clubs.dart';
+import 'graficos_estadisticas.dart';
+import 'sincronizacion_offline.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,8 +42,21 @@ class AppBookWorm extends StatelessWidget {
         '/search': (context) => const Buscar(),
         '/clubs': (context) => const Clubs(),
         '/perfil': (context) => const Perfil(),
+        '/chat_club': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return ChatClub(
+            clubId: args['clubId'],
+            clubNombre: args['clubNombre'],
+          );
+        },
+        '/graficos': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return GraficosEstadisticas(
+            datosEstadisticas: args['datosEstadisticas'],
+          );
+        },
+        '/sincronizacion': (context) => const PantallaSincronizacion(),
       },
-      initialRoute: '/',
     );
   }
 }

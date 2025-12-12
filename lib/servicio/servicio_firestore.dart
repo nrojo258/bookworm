@@ -94,7 +94,6 @@ class ServicioFirestore {
     }
   }
 
-
   Future<void> actualizarEstadoLectura({
     required String progresoId,
     required String estado,
@@ -103,15 +102,14 @@ class ServicioFirestore {
   }) async {
     try {
       final datosActualizacion = <String, dynamic>{'estado': estado};
-     
+      
       if (paginaActual != null) {
         datosActualizacion['paginaActual'] = paginaActual;
       }
-     
+      
       if (fechaCompletado != null) {
         datosActualizacion['fechaCompletado'] = Timestamp.fromDate(fechaCompletado);
       }
-
 
       await _firestore
           .collection('progreso_lectura')
@@ -123,7 +121,6 @@ class ServicioFirestore {
       throw Exception('Error al actualizar estado: $e');
     }
   }
-
 
   Future<ProgresoLectura?> obtenerProgresoLibro(String usuarioId, String libroId) async {
     try {
@@ -163,4 +160,143 @@ class ServicioFirestore {
       return [];
     }
   }
+
+
+Future<void> sincronizarDatosCompletos() async {
+  try {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return;
+
+    final batch = _firestore.batch();
+
+    final usuarioDoc = await _firestore.collection('usuarios').doc(usuario.uid).get();
+    
+    if (usuarioDoc.exists) {
+      print('✅ Datos de usuario sincronizados');
+    }
+
+    final progresosSnapshot = await _firestore
+        .collection('progreso_lectura')
+        .where('usuarioId', isEqualTo: usuario.uid)
+        .where('needsSync', isEqualTo: true)
+        .get();
+
+    for (final doc in progresosSnapshot.docs) {
+      batch.update(doc.reference, {'needsSync': false});
+    }
+
+    await batch.commit();
+    print('✅ Sincronización completa exitosa');
+
+  } catch (e) {
+    print('❌ Error en sincronización completa: $e');
+    throw Exception('Error sincronizando datos: $e');
+  }
+}
+
+Future<Map<String, dynamic>> obtenerResumenDiario() async {
+  try {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return {};
+
+    final hoy = DateTime.now();
+    final inicioDia = DateTime(hoy.year, hoy.month, hoy.day);
+    final finDia = inicioDia.add(const Duration(days: 1));
+
+    final progresosHoy = await _firestore
+        .collection('progreso_lectura')
+        .where('usuarioId', isEqualTo: usuario.uid)
+        .where('fechaInicio', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
+        .where('fechaInicio', isLessThan: Timestamp.fromDate(finDia))
+        .get();
+
+    final completadosHoy = await _firestore
+        .collection('progreso_lectura')
+        .where('usuarioId', isEqualTo: usuario.uid)
+        .where('estado', isEqualTo: 'completado')
+        .where('fechaCompletado', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
+        .where('fechaCompletado', isLessThan: Timestamp.fromDate(finDia))
+        .get();
+
+    return {
+      'progresosHoy': progresosHoy.docs.length,
+      'completadosHoy': completadosHoy.docs.length,
+      'paginasLeidasHoy': progresosHoy.docs.fold(0, (sum, doc) {
+        final data = doc.data();
+        final paginaActual = data['paginaActual'];
+        
+        if (paginaActual == null) {
+          return sum;
+        } else if (paginaActual is int) {
+          return sum + paginaActual;
+        } else if (paginaActual is double) {
+          return sum + paginaActual.toInt();
+        } else if (paginaActual is String) {
+          return sum + (int.tryParse(paginaActual) ?? 0);
+        } else {
+          return sum;
+        }
+      }),
+      'metaDiariaAlcanzada': completadosHoy.docs.isNotEmpty,
+    };
+  } catch (e) {
+    print('❌ Error obteniendo resumen diario: $e');
+    return {};
+  }
+}
+
+Future<void> crearClub(Map<String, dynamic> datosClub) async {
+  try {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return;
+
+    final clubId = _firestore.collection('clubs').doc().id;
+    
+    await _firestore.collection('clubs').doc(clubId).set({
+      'id': clubId,
+      'nombre': datosClub['nombre'],
+      'descripcion': datosClub['descripcion'] ?? '',
+      'genero': datosClub['genero'],
+      'creadorId': usuario.uid,
+      'creadorNombre': usuario.displayName ?? 'Usuario',
+      'fechaCreacion': FieldValue.serverTimestamp(),
+      'miembros': [usuario.uid],
+      'miembrosCount': 1,
+      'libroActual': datosClub['libroActual'],
+      'estado': 'activo',
+      'privacidad': datosClub['privacidad'] ?? 'publico',
+    });
+
+    print('✅ Club creado exitosamente: $clubId');
+  } catch (e) {
+    print('❌ Error creando club: $e');
+    throw Exception('Error creando club: $e');
+  }
+}
+
+Stream<QuerySnapshot> obtenerClubsEnTiempoReal() {
+  return _firestore
+      .collection('clubs')
+      .where('estado', isEqualTo: 'activo')
+      .orderBy('fechaCreacion', descending: true)
+      .limit(20)
+      .snapshots();
+}
+
+Future<void> unirseAClub(String clubId) async {
+  try {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return;
+
+    await _firestore.collection('clubs').doc(clubId).update({
+      'miembros': FieldValue.arrayUnion([usuario.uid]),
+      'miembrosCount': FieldValue.increment(1),
+    });
+
+    print('✅ Usuario unido al club: $clubId');
+  } catch (e) {
+    print('❌ Error uniéndose al club: $e');
+    throw Exception('Error uniéndose al club: $e');
+  }
+}
 }
