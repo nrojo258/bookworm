@@ -20,7 +20,6 @@ class ServicioFirestore {
     }
   }
 
-
   Future<DatosUsuario?> obtenerDatosUsuario(String uid) async {
     try {
       final doc = await _firestore.collection('usuarios').doc(uid).get();
@@ -36,7 +35,6 @@ class ServicioFirestore {
     }
   }
 
-
   Future<void> actualizarEstadisticasUsuario(String uid, Map<String, dynamic> nuevasEstadisticas) async {
     try {
       await _firestore
@@ -49,7 +47,6 @@ class ServicioFirestore {
       throw Exception('Error al actualizar stats: $e');
     }
   }
-
 
   Future<void> guardarProgresoLectura(ProgresoLectura progreso) async {
     try {
@@ -64,7 +61,6 @@ class ServicioFirestore {
     }
   }
 
-
   Stream<List<ProgresoLectura>> obtenerProgresoLecturaUsuario(String usuarioId) {
     return _firestore
         .collection('progreso_lectura')
@@ -75,7 +71,6 @@ class ServicioFirestore {
             .map((doc) => ProgresoLectura.fromMap(doc.data()))
             .toList());
   }
-
 
   Future<List<ProgresoLectura>> obtenerLibrosCompletados(String usuarioId) async {
     try {
@@ -131,7 +126,6 @@ class ServicioFirestore {
           .limit(1)
           .get();
 
-
       if (snapshot.docs.isNotEmpty) {
         return ProgresoLectura.fromMap(snapshot.docs.first.data());
       }
@@ -142,7 +136,6 @@ class ServicioFirestore {
     }
   }
 
-
   Future<List<ProgresoLectura>> obtenerLibrosEnProgreso(String usuarioId) async {
     try {
       final snapshot = await _firestore
@@ -150,7 +143,6 @@ class ServicioFirestore {
           .where('usuarioId', isEqualTo: usuarioId)
           .where('estado', isEqualTo: 'leyendo')
           .get();
-
 
       return snapshot.docs
           .map((doc) => ProgresoLectura.fromMap(doc.data()))
@@ -161,142 +153,241 @@ class ServicioFirestore {
     }
   }
 
+  Future<void> sincronizarDatosCompletos() async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return;
 
-Future<void> sincronizarDatosCompletos() async {
-  try {
-    final usuario = _auth.currentUser;
-    if (usuario == null) return;
+      final batch = _firestore.batch();
 
-    final batch = _firestore.batch();
+      final usuarioDoc = await _firestore.collection('usuarios').doc(usuario.uid).get();
+      
+      if (usuarioDoc.exists) {
+        print('✅ Datos de usuario sincronizados');
+      }
 
-    final usuarioDoc = await _firestore.collection('usuarios').doc(usuario.uid).get();
-    
-    if (usuarioDoc.exists) {
-      print('✅ Datos de usuario sincronizados');
+      final progresosSnapshot = await _firestore
+          .collection('progreso_lectura')
+          .where('usuarioId', isEqualTo: usuario.uid)
+          .where('needsSync', isEqualTo: true)
+          .get();
+
+      for (final doc in progresosSnapshot.docs) {
+        batch.update(doc.reference, {'needsSync': false});
+      }
+
+      await batch.commit();
+      print('✅ Sincronización completa exitosa');
+
+    } catch (e) {
+      print('❌ Error en sincronización completa: $e');
+      throw Exception('Error sincronizando datos: $e');
     }
+  }
 
-    final progresosSnapshot = await _firestore
-        .collection('progreso_lectura')
-        .where('usuarioId', isEqualTo: usuario.uid)
-        .where('needsSync', isEqualTo: true)
-        .get();
+  Future<Map<String, dynamic>> obtenerResumenDiario() async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return {};
 
-    for (final doc in progresosSnapshot.docs) {
-      batch.update(doc.reference, {'needsSync': false});
+      final hoy = DateTime.now();
+      final inicioDia = DateTime(hoy.year, hoy.month, hoy.day);
+      final finDia = inicioDia.add(const Duration(days: 1));
+
+      final progresosHoy = await _firestore
+          .collection('progreso_lectura')
+          .where('usuarioId', isEqualTo: usuario.uid)
+          .where('fechaInicio', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
+          .where('fechaInicio', isLessThan: Timestamp.fromDate(finDia))
+          .get();
+
+      final completadosHoy = await _firestore
+          .collection('progreso_lectura')
+          .where('usuarioId', isEqualTo: usuario.uid)
+          .where('estado', isEqualTo: 'completado')
+          .where('fechaCompletado', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
+          .where('fechaCompletado', isLessThan: Timestamp.fromDate(finDia))
+          .get();
+
+      return {
+        'progresosHoy': progresosHoy.docs.length,
+        'completadosHoy': completadosHoy.docs.length,
+        'paginasLeidasHoy': progresosHoy.docs.fold(0, (sum, doc) {
+          final data = doc.data();
+          final paginaActual = data['paginaActual'];
+          
+          if (paginaActual == null) {
+            return sum;
+          } else if (paginaActual is int) {
+            return sum + paginaActual;
+          } else if (paginaActual is double) {
+            return sum + paginaActual.toInt();
+          } else if (paginaActual is String) {
+            return sum + (int.tryParse(paginaActual) ?? 0);
+          } else {
+            return sum;
+          }
+        }),
+        'metaDiariaAlcanzada': completadosHoy.docs.isNotEmpty,
+      };
+    } catch (e) {
+      print('❌ Error obteniendo resumen diario: $e');
+      return {};
     }
-
-    await batch.commit();
-    print('✅ Sincronización completa exitosa');
-
-  } catch (e) {
-    print('❌ Error en sincronización completa: $e');
-    throw Exception('Error sincronizando datos: $e');
   }
-}
 
-Future<Map<String, dynamic>> obtenerResumenDiario() async {
-  try {
-    final usuario = _auth.currentUser;
-    if (usuario == null) return {};
+  // === UN SOLO MÉTODO crearClub ===
+  Future<void> crearClub(Map<String, dynamic> datosClub) async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return;
 
-    final hoy = DateTime.now();
-    final inicioDia = DateTime(hoy.year, hoy.month, hoy.day);
-    final finDia = inicioDia.add(const Duration(days: 1));
+      final clubId = _firestore.collection('clubs').doc().id;
+      
+      await _firestore.collection('clubs').doc(clubId).set({
+        'id': clubId,
+        'nombre': datosClub['nombre'],
+        'descripcion': datosClub['descripcion'] ?? '',
+        'genero': datosClub['genero'],
+        'creadorId': usuario.uid,
+        'creadorNombre': usuario.displayName ?? 'Usuario',
+        'fechaCreacion': FieldValue.serverTimestamp(),
+        'miembros': [usuario.uid],
+        'miembrosCount': 1,
+        'libroActual': datosClub['libroActual'] ?? null,
+        'estado': 'activo',
+        'privacidad': datosClub['privacidad'] ?? 'publico',
+        'ultimaActividad': FieldValue.serverTimestamp(),
+      });
 
-    final progresosHoy = await _firestore
-        .collection('progreso_lectura')
-        .where('usuarioId', isEqualTo: usuario.uid)
-        .where('fechaInicio', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
-        .where('fechaInicio', isLessThan: Timestamp.fromDate(finDia))
-        .get();
-
-    final completadosHoy = await _firestore
-        .collection('progreso_lectura')
-        .where('usuarioId', isEqualTo: usuario.uid)
-        .where('estado', isEqualTo: 'completado')
-        .where('fechaCompletado', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDia))
-        .where('fechaCompletado', isLessThan: Timestamp.fromDate(finDia))
-        .get();
-
-    return {
-      'progresosHoy': progresosHoy.docs.length,
-      'completadosHoy': completadosHoy.docs.length,
-      'paginasLeidasHoy': progresosHoy.docs.fold(0, (sum, doc) {
-        final data = doc.data();
-        final paginaActual = data['paginaActual'];
-        
-        if (paginaActual == null) {
-          return sum;
-        } else if (paginaActual is int) {
-          return sum + paginaActual;
-        } else if (paginaActual is double) {
-          return sum + paginaActual.toInt();
-        } else if (paginaActual is String) {
-          return sum + (int.tryParse(paginaActual) ?? 0);
-        } else {
-          return sum;
-        }
-      }),
-      'metaDiariaAlcanzada': completadosHoy.docs.isNotEmpty,
-    };
-  } catch (e) {
-    print('❌ Error obteniendo resumen diario: $e');
-    return {};
-  }
-}
-
-Future<void> crearClub(Map<String, dynamic> datosClub) async {
-  try {
-    final usuario = _auth.currentUser;
-    if (usuario == null) return;
-
-    final clubId = _firestore.collection('clubs').doc().id;
-    
-    await _firestore.collection('clubs').doc(clubId).set({
-      'id': clubId,
+      await _firestore
+        .collection('usuarios')
+        .doc(usuario.uid)
+        .collection('mis_clubs')
+        .doc(clubId)
+        .set({
+      'clubId': clubId,
       'nombre': datosClub['nombre'],
-      'descripcion': datosClub['descripcion'] ?? '',
       'genero': datosClub['genero'],
-      'creadorId': usuario.uid,
-      'creadorNombre': usuario.displayName ?? 'Usuario',
-      'fechaCreacion': FieldValue.serverTimestamp(),
-      'miembros': [usuario.uid],
-      'miembrosCount': 1,
-      'libroActual': datosClub['libroActual'],
-      'estado': 'activo',
-      'privacidad': datosClub['privacidad'] ?? 'publico',
+      'fechaUnion': FieldValue.serverTimestamp(),
+      'rol': 'creador',
+      'notificaciones': true,
     });
 
-    print('✅ Club creado exitosamente: $clubId');
-  } catch (e) {
-    print('❌ Error creando club: $e');
-    throw Exception('Error creando club: $e');
+      print('✅ Club creado exitosamente: $clubId');
+    } catch (e) {
+      print('❌ Error creando club: $e');
+      throw Exception('Error creando club: $e');
+    }
   }
-}
 
-Stream<QuerySnapshot> obtenerClubsEnTiempoReal() {
-  return _firestore
-      .collection('clubs')
-      .where('estado', isEqualTo: 'activo')
-      .orderBy('fechaCreacion', descending: true)
-      .limit(20)
-      .snapshots();
-}
-
-Future<void> unirseAClub(String clubId) async {
-  try {
-    final usuario = _auth.currentUser;
-    if (usuario == null) return;
-
-    await _firestore.collection('clubs').doc(clubId).update({
-      'miembros': FieldValue.arrayUnion([usuario.uid]),
-      'miembrosCount': FieldValue.increment(1),
-    });
-
-    print('✅ Usuario unido al club: $clubId');
-  } catch (e) {
-    print('❌ Error uniéndose al club: $e');
-    throw Exception('Error uniéndose al club: $e');
+  Stream<QuerySnapshot> obtenerClubsEnTiempoReal() {
+    return _firestore
+        .collection('clubs')
+        .where('estado', isEqualTo: 'activo')
+        .orderBy('fechaCreacion', descending: true)
+        .limit(20)
+        .snapshots();
   }
-}
+
+  Future<void> unirseAClub(String clubId) async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return;
+
+      // Obtener información del club primero
+      final clubDoc = await _firestore.collection('clubs').doc(clubId).get();
+      if (!clubDoc.exists) throw Exception('Club no encontrado');
+      
+      final clubData = clubDoc.data()!;
+
+      // Actualizar el club principal
+      await _firestore.collection('clubs').doc(clubId).update({
+        'miembros': FieldValue.arrayUnion([usuario.uid]),
+        'miembrosCount': FieldValue.increment(1),
+        'ultimaActividad': FieldValue.serverTimestamp(),
+      });
+
+      // Guardar en mis_clubs del usuario
+      await _firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .collection('mis_clubs')
+          .doc(clubId)
+          .set({
+        'clubId': clubId,
+        'nombre': clubData['nombre'],
+        'genero': clubData['genero'],
+        'fechaUnion': FieldValue.serverTimestamp(),
+        'rol': 'miembro',
+        'notificaciones': true,
+      });
+
+      print('✅ Usuario unido al club: $clubId');
+    } catch (e) {
+      print('❌ Error uniéndose al club: $e');
+      throw Exception('Error uniéndose al club: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerClubsUsuario() async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return [];
+
+      final snapshot = await _firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .collection('mis_clubs')
+          .orderBy('fechaUnion', descending: true)
+          .get();
+
+      final clubsCompletos = await Future.wait(
+        snapshot.docs.map((doc) async {
+          final clubData = doc.data();
+          final clubDetalle = await _firestore
+              .collection('clubs')
+              .doc(clubData['clubId'])
+              .get();
+          
+          if (clubDetalle.exists) {
+            return {
+              ...clubData,
+              ...clubDetalle.data()!,
+            };
+          }
+          return clubData;
+        }),
+      );
+
+      return clubsCompletos.where((club) => club != null).cast<Map<String, dynamic>>().toList();
+    } catch (e) {
+      print('❌ Error obteniendo clubs del usuario: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerClubsRecomendados() async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return [];
+
+      final snapshot = await _firestore
+          .collection('clubs')
+          .where('estado', isEqualTo: 'activo')
+          .where('privacidad', isEqualTo: 'publico')
+          .orderBy('miembrosCount', descending: true)
+          .limit(10)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ Error obteniendo clubs recomendados: $e');
+      return [];
+    }
+  }
 }

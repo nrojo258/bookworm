@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
+import '../servicio/servicio_firestore.dart'; 
 
 class Clubs extends StatefulWidget {
   const Clubs({super.key});
@@ -11,8 +12,19 @@ class Clubs extends StatefulWidget {
 
 class _ClubsState extends State<Clubs> {
   final TextEditingController _controladorBusqueda = TextEditingController();
+  final ServicioFirestore _servicioFirestore = ServicioFirestore(); // <-- Instanciar servicio
   int _seccionSeleccionada = 0;
   String? _generoSeleccionado;
+  
+  List<Map<String, dynamic>> _misClubs = [];
+  List<Map<String, dynamic>> _clubsRecomendados = [];
+  bool _cargandoClubs = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarClubs();
+  }
 
   @override
   void dispose() {
@@ -20,9 +32,27 @@ class _ClubsState extends State<Clubs> {
     super.dispose();
   }
 
+  Future<void> _cargarClubs() async {
+    setState(() => _cargandoClubs = true);
+    
+    try {
+      if (_seccionSeleccionada == 0) {
+        _clubsRecomendados = await _servicioFirestore.obtenerClubsRecomendados();
+      } else {
+        _misClubs = await _servicioFirestore.obtenerClubsUsuario();
+      }
+    } catch (e) {
+      print('Error cargando clubs: $e');
+    } finally {
+      setState(() => _cargandoClubs = false);
+    }
+  }
+
   void _mostrarCrearClub() {
     final controladorNombre = TextEditingController();
+    final controladorDescripcion = TextEditingController();
     String? generoDialogo; 
+    String? privacidad = 'publico';
     
     showDialog(
       context: context,
@@ -43,11 +73,18 @@ class _ClubsState extends State<Clubs> {
                   ),
                   maxLength: 50,
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Género del club', 
-                  style: EstilosApp.cuerpoGrande
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: controladorDescripcion,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción (opcional)',
+                    prefixIcon: Icon(Icons.description, color: AppColores.primario)
+                  ),
+                  maxLines: 3,
+                  maxLength: 200,
                 ),
+                const SizedBox(height: 16),
+                const Text('Género del club', style: EstilosApp.cuerpoGrande),
                 const SizedBox(height: 10),
                 FiltroDesplegable(
                   valor: generoDialogo,
@@ -59,6 +96,34 @@ class _ClubsState extends State<Clubs> {
                     });
                   },
                 ),
+                const SizedBox(height: 16),
+                const Text('Privacidad', style: EstilosApp.cuerpoGrande),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Radio<String>(
+                      value: 'publico',
+                      groupValue: privacidad,
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          privacidad = value;
+                        });
+                      },
+                    ),
+                    const Text('Público'),
+                    const SizedBox(width: 20),
+                    Radio<String>(
+                      value: 'privado',
+                      groupValue: privacidad,
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          privacidad = value;
+                        });
+                      },
+                    ),
+                    const Text('Privado'),
+                  ],
+                ),
               ],
             ),
           ),
@@ -68,9 +133,14 @@ class _ClubsState extends State<Clubs> {
               child: const Text('Cancelar')
             ),
             ElevatedButton(
-              onPressed: controladorNombre.text.isEmpty || generoDialogo == null ? null : () {
-                _crearClub(controladorNombre.text, generoDialogo!);
+              onPressed: controladorNombre.text.isEmpty || generoDialogo == null ? null : () async {
                 Navigator.pop(context);
+                await _crearClub(
+                  controladorNombre.text,
+                  controladorDescripcion.text,
+                  generoDialogo!,
+                  privacidad!,
+                );
               },
               style: EstilosApp.botonPrimario,
               child: const Text('Crear Club'),
@@ -81,15 +151,160 @@ class _ClubsState extends State<Clubs> {
     );
   }
 
-  void _crearClub(String nombre, String genero) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Club "$nombre" creado exitosamente'),
-        backgroundColor: AppColores.secundario,
-        behavior: SnackBarBehavior.floating,
+  Future<void> _crearClub(String nombre, String descripcion, String genero, String privacidad) async {
+    try {
+      await _servicioFirestore.crearClub({
+        'nombre': nombre,
+        'descripcion': descripcion,
+        'genero': genero,
+        'privacidad': privacidad,
+      });
+
+      await _cargarClubs();
+
+      setState(() {
+        _seccionSeleccionada = 1;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Club "$nombre" creado exitosamente'),
+          backgroundColor: AppColores.secundario,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creando club: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _unirseAClub(String clubId, String clubNombre) async {
+    try {
+      await _servicioFirestore.unirseAClub(clubId);
+      
+      await _cargarClubs();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Te has unido al club "$clubNombre"'),
+          backgroundColor: AppColores.secundario,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uniéndose al club: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _construirTarjetaClub(Map<String, dynamic> club) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: EstilosApp.decoracionTarjetaPlana,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  club['nombre'] ?? 'Sin nombre',
+                  style: EstilosApp.tituloPequeno,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColores.primario.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  club['genero'] ?? 'General',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColores.primario,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          if (club['descripcion'] != null && club['descripcion'].toString().isNotEmpty)
+            Text(
+              club['descripcion'].toString(),
+              style: EstilosApp.cuerpoMedio,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.people, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                '${club['miembrosCount'] ?? 0} miembros',
+                style: EstilosApp.cuerpoPequeno,
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.person, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                club['creadorNombre'] ?? 'Usuario',
+                style: EstilosApp.cuerpoPequeno,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          if (_seccionSeleccionada == 0)
+            ElevatedButton(
+              onPressed: () => _unirseAClub(club['id'], club['nombre']),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 40),
+                backgroundColor: AppColores.secundario,
+              ),
+              child: const Text('Unirse al club'),
+            )
+          else
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  '/chat_club',
+                  arguments: {
+                    'clubId': club['id'],
+                    'clubNombre': club['nombre'],
+                  },
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 40),
+                backgroundColor: AppColores.primario,
+              ),
+              child: const Text('Entrar al chat'),
+            ),
+        ],
       ),
     );
-    setState(() => _generoSeleccionado = null);
   }
 
   @override
@@ -136,7 +351,9 @@ class _ClubsState extends State<Clubs> {
                   BarraBusquedaPersonalizada(
                     controlador: _controladorBusqueda,
                     textoHint: 'Buscar clubs...',
-                    alBuscar: () {},
+                    alBuscar: () {
+                      print('Buscar: ${_controladorBusqueda.text}');
+                    },
                   ),
                 ],
               ),
@@ -151,14 +368,20 @@ class _ClubsState extends State<Clubs> {
                   texto: 'Descubrir clubs',
                   estaSeleccionado: _seccionSeleccionada == 0,
                   icono: Icons.explore,
-                  alPresionar: () => setState(() => _seccionSeleccionada = 0),
+                  alPresionar: () {
+                    setState(() => _seccionSeleccionada = 0);
+                    _cargarClubs();
+                  },
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: BotonSeccion(
                   texto: 'Mis clubs',
                   estaSeleccionado: _seccionSeleccionada == 1,
                   icono: Icons.group,
-                  alPresionar: () => setState(() => _seccionSeleccionada = 1),
+                  alPresionar: () {
+                    setState(() => _seccionSeleccionada = 1);
+                    _cargarClubs();
+                  },
                 )),
               ]),
             ),
@@ -172,42 +395,80 @@ class _ClubsState extends State<Clubs> {
   }
 
   Widget _construirDescubrirClubs() {
+    if (_cargandoClubs) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: EstilosApp.decoracionTarjeta,
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_clubsRecomendados.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: EstilosApp.decoracionTarjeta,
+        child: const EstadoVacio(
+          icono: Icons.group,
+          titulo: 'No se encontraron clubs',
+          descripcion: 'Sé el primero en crear un club',
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: EstilosApp.decoracionTarjeta,
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Clubs recomendados', style: EstilosApp.tituloMedio),
-          SizedBox(height: 16),
-          Text('Explora clubs basados en tus intereses', style: EstilosApp.cuerpoMedio),
-          SizedBox(height: 20),
-          EstadoVacio(
-            icono: Icons.group,
-            titulo: 'No se encontraron clubs',
-            descripcion: 'Intenta con otros términos de búsqueda',
+          const Text('Clubs recomendados', style: EstilosApp.tituloMedio),
+          const SizedBox(height: 8),
+          Text(
+            'Explora clubs basados en tus intereses',
+            style: EstilosApp.cuerpoMedio,
           ),
+          const SizedBox(height: 20),
+          ..._clubsRecomendados.map(_construirTarjetaClub).toList(),
         ],
       ),
     );
   }
 
   Widget _construirMisClubs() {
+    if (_cargandoClubs) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: EstilosApp.decoracionTarjeta,
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_misClubs.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: EstilosApp.decoracionTarjeta,
+        child: const EstadoVacio(
+          icono: Icons.group_add,
+          titulo: 'No tienes clubs activos',
+          descripcion: 'Únete a un club o crea uno nuevo',
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: EstilosApp.decoracionTarjeta,
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Mis clubs activos', style: EstilosApp.tituloMedio),
-          SizedBox(height: 16),
-          Text('Gestiona tus clubs de lectura actuales', style: EstilosApp.cuerpoMedio),
-          SizedBox(height: 20),
-          EstadoVacio(
-            icono: Icons.group_add,
-            titulo: 'No tienes clubs activos',
-            descripcion: 'Únete a un club o crea uno nuevo',
+          const Text('Mis clubs activos', style: EstilosApp.tituloMedio),
+          const SizedBox(height: 8),
+          Text(
+            'Gestiona tus clubs de lectura actuales',
+            style: EstilosApp.cuerpoMedio,
           ),
+          const SizedBox(height: 20),
+          ..._misClubs.map(_construirTarjetaClub).toList(),
         ],
       ),
     );
