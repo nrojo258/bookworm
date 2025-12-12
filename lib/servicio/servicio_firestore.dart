@@ -13,9 +13,9 @@ class ServicioFirestore {
           .collection('usuarios')
           .doc(datosUsuario.uid)
           .set(datosUsuario.toMap());
-      print('✅ Usuario creado en Firestore: ${datosUsuario.uid}');
+      print('Usuario creado en Firestore: ${datosUsuario.uid}');
     } catch (e) {
-      print('❌ Error al crear usuario: $e');
+      print('Error al crear usuario: $e');
       throw Exception('Error al crear usuario: $e');
     }
   }
@@ -24,13 +24,13 @@ class ServicioFirestore {
     try {
       final doc = await _firestore.collection('usuarios').doc(uid).get();
       if (doc.exists) {
-        print('✅ Usuario obtenido de Firestore: ${doc.data()}');
+        print('Usuario obtenido de Firestore: ${doc.data()}');
         return DatosUsuario.fromMap(doc.data()!);
       }
       print('⚠️ Usuario no encontrado en Firestore');
       return null;
     } catch (e) {
-      print('❌ Error al obtener usuario: $e');
+      print('Error al obtener usuario: $e');
       throw Exception('Error al obtener usuario: $e');
     }
   }
@@ -41,9 +41,9 @@ class ServicioFirestore {
           .collection('usuarios')
           .doc(uid)
           .update({'estadisticas': nuevasEstadisticas});
-      print('✅ Estadísticas actualizadas');
+      print('Estadísticas actualizadas');
     } catch (e) {
-      print('❌ Error al actualizar stats: $e');
+      print('Error al actualizar stats: $e');
       throw Exception('Error al actualizar stats: $e');
     }
   }
@@ -54,9 +54,9 @@ class ServicioFirestore {
           .collection('progreso_lectura')
           .doc(progreso.id)
           .set(progreso.toMap());
-      print('✅ Progreso guardado: ${progreso.tituloLibro}');
+      print('Progreso guardado: ${progreso.tituloLibro}');
     } catch (e) {
-      print('❌ Error al guardar progreso: $e');
+      print('Error al guardar progreso: $e');
       throw Exception('Error al guardar progreso: $e');
     }
   }
@@ -84,7 +84,7 @@ class ServicioFirestore {
           .map((doc) => ProgresoLectura.fromMap(doc.data()))
           .toList();
     } catch (e) {
-      print('❌ Error al obtener libros completados: $e');
+      print('Error al obtener libros completados: $e');
       throw Exception('Error al obtener libros completados: $e');
     }
   }
@@ -110,9 +110,9 @@ class ServicioFirestore {
           .collection('progreso_lectura')
           .doc(progresoId)
           .update(datosActualizacion);
-      print('✅ Estado de lectura actualizado: $estado');
+      print('Estado de lectura actualizado: $estado');
     } catch (e) {
-      print('❌ Error al actualizar estado: $e');
+      print('Error al actualizar estado: $e');
       throw Exception('Error al actualizar estado: $e');
     }
   }
@@ -131,7 +131,7 @@ class ServicioFirestore {
       }
       return null;
     } catch (e) {
-      print('❌ Error al verificar progreso: $e');
+      print('Error al verificar progreso: $e');
       return null;
     }
   }
@@ -148,7 +148,7 @@ class ServicioFirestore {
           .map((doc) => ProgresoLectura.fromMap(doc.data()))
           .toList();
     } catch (e) {
-      print('❌ Error al obtener libros en progreso: $e');
+      print('Error al obtener libros en progreso: $e');
       return [];
     }
   }
@@ -163,7 +163,7 @@ class ServicioFirestore {
       final usuarioDoc = await _firestore.collection('usuarios').doc(usuario.uid).get();
       
       if (usuarioDoc.exists) {
-        print('✅ Datos de usuario sincronizados');
+        print('Datos de usuario sincronizados');
       }
 
       final progresosSnapshot = await _firestore
@@ -177,10 +177,10 @@ class ServicioFirestore {
       }
 
       await batch.commit();
-      print('✅ Sincronización completa exitosa');
+      print('Sincronización completa exitosa');
 
     } catch (e) {
-      print('❌ Error en sincronización completa: $e');
+      print('Error en sincronización completa: $e');
       throw Exception('Error sincronizando datos: $e');
     }
   }
@@ -231,12 +231,11 @@ class ServicioFirestore {
         'metaDiariaAlcanzada': completadosHoy.docs.isNotEmpty,
       };
     } catch (e) {
-      print('❌ Error obteniendo resumen diario: $e');
+      print('Error obteniendo resumen diario: $e');
       return {};
     }
   }
 
-  // === UN SOLO MÉTODO crearClub ===
   Future<void> crearClub(Map<String, dynamic> datosClub) async {
     try {
       final usuario = _auth.currentUser;
@@ -274,9 +273,9 @@ class ServicioFirestore {
       'notificaciones': true,
     });
 
-      print('✅ Club creado exitosamente: $clubId');
+      print('Club creado exitosamente: $clubId');
     } catch (e) {
-      print('❌ Error creando club: $e');
+      print('Error creando club: $e');
       throw Exception('Error creando club: $e');
     }
   }
@@ -295,20 +294,17 @@ class ServicioFirestore {
       final usuario = _auth.currentUser;
       if (usuario == null) return;
 
-      // Obtener información del club primero
       final clubDoc = await _firestore.collection('clubs').doc(clubId).get();
       if (!clubDoc.exists) throw Exception('Club no encontrado');
       
       final clubData = clubDoc.data()!;
 
-      // Actualizar el club principal
       await _firestore.collection('clubs').doc(clubId).update({
         'miembros': FieldValue.arrayUnion([usuario.uid]),
         'miembrosCount': FieldValue.increment(1),
         'ultimaActividad': FieldValue.serverTimestamp(),
       });
 
-      // Guardar en mis_clubs del usuario
       await _firestore
           .collection('usuarios')
           .doc(usuario.uid)
@@ -323,9 +319,9 @@ class ServicioFirestore {
         'notificaciones': true,
       });
 
-      print('✅ Usuario unido al club: $clubId');
+      print('Usuario unido al club: $clubId');
     } catch (e) {
-      print('❌ Error uniéndose al club: $e');
+      print('Error uniéndose al club: $e');
       throw Exception('Error uniéndose al club: $e');
     }
   }
@@ -362,7 +358,7 @@ class ServicioFirestore {
 
       return clubsCompletos.where((club) => club != null).cast<Map<String, dynamic>>().toList();
     } catch (e) {
-      print('❌ Error obteniendo clubs del usuario: $e');
+      print('Error obteniendo clubs del usuario: $e');
       return [];
     }
   }
@@ -386,7 +382,7 @@ class ServicioFirestore {
         return data;
       }).toList();
     } catch (e) {
-      print('❌ Error obteniendo clubs recomendados: $e');
+      print('Error obteniendo clubs recomendados: $e');
       return [];
     }
   }
