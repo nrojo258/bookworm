@@ -255,7 +255,6 @@ class ServicioFirestore {
         'miembrosCount': 1,
         'libroActual': datosClub['libroActual'] ?? null,
         'estado': 'activo',
-        'privacidad': datosClub['privacidad'] ?? 'publico',
         'ultimaActividad': FieldValue.serverTimestamp(),
       });
 
@@ -271,7 +270,7 @@ class ServicioFirestore {
       'fechaUnion': FieldValue.serverTimestamp(),
       'rol': 'creador',
       'notificaciones': true,
-    });
+      });
 
       print('Club creado exitosamente: $clubId');
     } catch (e) {
@@ -280,13 +279,40 @@ class ServicioFirestore {
     }
   }
 
-  Stream<QuerySnapshot> obtenerClubsEnTiempoReal() {
-    return _firestore
-        .collection('clubs')
-        .where('estado', isEqualTo: 'activo')
-        .orderBy('fechaCreacion', descending: true)
-        .limit(20)
-        .snapshots();
+  Future<void> actualizarInfoClub({
+    required String clubId,
+    required String nombre,
+    required String descripcion,
+    required String genero,
+  }) async {
+    try {
+      await _firestore.collection('clubs').doc(clubId).update({
+        'nombre': nombre,
+        'descripcion': descripcion,
+        'genero': genero,
+        'ultimaActividad': FieldValue.serverTimestamp(),
+      });
+
+      final clubSnapshot = await _firestore.collection('clubs').doc(clubId).get();
+      final miembros = clubSnapshot.data()?['miembros'] as List<dynamic>? ?? [];
+
+      for (final miembroId in miembros) {
+        await _firestore
+            .collection('usuarios')
+            .doc(miembroId.toString())
+            .collection('mis_clubs')
+            .doc(clubId)
+            .update({
+          'nombre': nombre,
+          'genero': genero,
+        });
+      }
+
+      print('Información del club actualizada: $clubId');
+    } catch (e) {
+      print('Error actualizando club: $e');
+      throw Exception('Error actualizando club: $e');
+    }
   }
 
   Future<void> unirseAClub(String clubId) async {

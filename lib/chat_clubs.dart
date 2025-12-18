@@ -3,15 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'diseño.dart';
 import 'componentes.dart';
+import '../servicio/servicio_firestore.dart'; 
 
 class ChatClub extends StatefulWidget {
   final String clubId;
   final String clubNombre;
+  final String? rolUsuario; 
 
   const ChatClub({
     super.key,
     required this.clubId,
     required this.clubNombre,
+    this.rolUsuario = 'miembro',
   });
 
   @override
@@ -22,13 +25,158 @@ class _ChatClubState extends State<ChatClub> {
   final TextEditingController _controladorMensaje = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ServicioFirestore _servicioFirestore = ServicioFirestore(); 
   final ScrollController _scrollController = ScrollController();
+  
+  String? _rolUsuario;
+  Map<String, dynamic>? _infoClub;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarInfoClub();
+  }
 
   @override
   void dispose() {
     _controladorMensaje.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarInfoClub() async {
+    try {
+      final clubDoc = await _firestore.collection('clubs').doc(widget.clubId).get();
+      if (clubDoc.exists) {
+        setState(() {
+          _infoClub = clubDoc.data();
+        });
+      }
+
+      final usuario = _auth.currentUser;
+      if (usuario != null) {
+        final miClubDoc = await _firestore
+            .collection('usuarios')
+            .doc(usuario.uid)
+            .collection('mis_clubs')
+            .doc(widget.clubId)
+            .get();
+        
+        if (miClubDoc.exists) {
+          setState(() {
+            _rolUsuario = miClubDoc.data()?['rol'] ?? 'miembro';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error cargando info del club: $e');
+    }
+  }
+
+  void _mostrarDialogoEditarClub() {
+    final controladorNombre = TextEditingController(text: _infoClub?['nombre'] ?? '');
+    final controladorDescripcion = TextEditingController(text: _infoClub?['descripcion'] ?? '');
+    String? generoSeleccionado = _infoClub?['genero'] ?? 'Todos los géneros';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar información del club', style: EstilosApp.tituloMedio),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: controladorNombre,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del club',
+                  border: OutlineInputBorder(),
+                ),
+                maxLength: 50,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: controladorDescripcion,
+                decoration: const InputDecoration(
+                  labelText: 'Descripción',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                maxLength: 200,
+              ),
+              const SizedBox(height: 16),
+              const Text('Género favorito', style: EstilosApp.cuerpoGrande),
+              const SizedBox(height: 8),
+              FiltroDesplegable(
+                valor: generoSeleccionado,
+                items: DatosApp.generos,
+                hint: 'Selecciona un género',
+                alCambiar: (valor) {
+                  if (valor != null) {
+                    generoSeleccionado = valor;
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controladorNombre.text.isEmpty || generoSeleccionado == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Nombre y género son obligatorios'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              try {
+                await _servicioFirestore.actualizarInfoClub(
+                  clubId: widget.clubId,
+                  nombre: controladorNombre.text,
+                  descripcion: controladorDescripcion.text,
+                  genero: generoSeleccionado!,
+                );
+
+                setState(() {
+                  _infoClub = {
+                    ...?_infoClub,
+                    'nombre': controladorNombre.text,
+                    'descripcion': controladorDescripcion.text,
+                    'genero': generoSeleccionado,
+                  };
+                });
+
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Información del club actualizada'),
+                    backgroundColor: AppColores.secundario,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error actualizando: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: EstilosApp.botonPrimario,
+            child: const Text('Guardar cambios'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _enviarMensaje() async {
@@ -44,6 +192,10 @@ class _ChatClubState extends State<ChatClub> {
         'usuarioNombre': usuario.displayName ?? 'Usuario',
         'timestamp': FieldValue.serverTimestamp(),
         'leidoPor': [usuario.uid],
+      });
+
+      await _firestore.collection('clubs').doc(widget.clubId).update({
+        'ultimaActividad': FieldValue.serverTimestamp(),
       });
 
       _controladorMensaje.clear();
@@ -158,8 +310,36 @@ class _ChatClubState extends State<ChatClub> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.clubNombre),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _infoClub?['nombre'] ?? widget.clubNombre,
+              style: const TextStyle(fontSize: 18),
+            ),
+            if (_infoClub?['genero'] != null)
+              Text(
+                _infoClub?['genero'] ?? '',
+                style: const TextStyle(fontSize: 12),
+              ),
+          ],
+        ),
         backgroundColor: AppColores.primario,
+        actions: [
+          if (_rolUsuario == 'creador')
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _mostrarDialogoEditarClub,
+              tooltip: 'Editar información del club',
+            ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              _mostrarInfoClub();
+            },
+            tooltip: 'Información del club',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -239,6 +419,61 @@ class _ChatClubState extends State<ChatClub> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarInfoClub() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Información del club', style: EstilosApp.tituloMedio),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_infoClub?['nombre'] != null) ...[
+                const Text('Nombre:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_infoClub!['nombre']),
+                const SizedBox(height: 12),
+              ],
+              if (_infoClub?['descripcion'] != null && _infoClub!['descripcion'].toString().isNotEmpty) ...[
+                const Text('Descripción:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_infoClub!['descripcion']),
+                const SizedBox(height: 12),
+              ],
+              if (_infoClub?['genero'] != null) ...[
+                const Text('Género favorito:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_infoClub!['genero']),
+                const SizedBox(height: 12),
+              ],
+              if (_infoClub?['creadorNombre'] != null) ...[
+                const Text('Creado por:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_infoClub!['creadorNombre']),
+                const SizedBox(height: 12),
+              ],
+              if (_infoClub?['miembrosCount'] != null) ...[
+                const Text('Miembros:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('${_infoClub!['miembrosCount']} miembros'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          if (_rolUsuario == 'creador')
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _mostrarDialogoEditarClub();
+              },
+              child: const Text('Editar'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../servicio/servicio_firestore.dart'; 
+import '../servicio/servicio_firestore.dart';
 
 class Clubs extends StatefulWidget {
   const Clubs({super.key});
@@ -12,7 +12,7 @@ class Clubs extends StatefulWidget {
 
 class _ClubsState extends State<Clubs> {
   final TextEditingController _controladorBusqueda = TextEditingController();
-  final ServicioFirestore _servicioFirestore = ServicioFirestore(); // <-- Instanciar servicio
+  final ServicioFirestore _servicioFirestore = ServicioFirestore();
   int _seccionSeleccionada = 0;
   String? _generoSeleccionado;
   
@@ -52,7 +52,6 @@ class _ClubsState extends State<Clubs> {
     final controladorNombre = TextEditingController();
     final controladorDescripcion = TextEditingController();
     String? generoDialogo; 
-    String? privacidad = 'publico';
     
     showDialog(
       context: context,
@@ -96,34 +95,6 @@ class _ClubsState extends State<Clubs> {
                     });
                   },
                 ),
-                const SizedBox(height: 16),
-                const Text('Privacidad', style: EstilosApp.cuerpoGrande),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Radio<String>(
-                      value: 'publico',
-                      groupValue: privacidad,
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          privacidad = value;
-                        });
-                      },
-                    ),
-                    const Text('Público'),
-                    const SizedBox(width: 20),
-                    Radio<String>(
-                      value: 'privado',
-                      groupValue: privacidad,
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          privacidad = value;
-                        });
-                      },
-                    ),
-                    const Text('Privado'),
-                  ],
-                ),
               ],
             ),
           ),
@@ -139,7 +110,6 @@ class _ClubsState extends State<Clubs> {
                   controladorNombre.text,
                   controladorDescripcion.text,
                   generoDialogo!,
-                  privacidad!,
                 );
               },
               style: EstilosApp.botonPrimario,
@@ -151,13 +121,12 @@ class _ClubsState extends State<Clubs> {
     );
   }
 
-  Future<void> _crearClub(String nombre, String descripcion, String genero, String privacidad) async {
+  Future<void> _crearClub(String nombre, String descripcion, String genero) async {
     try {
       await _servicioFirestore.crearClub({
         'nombre': nombre,
         'descripcion': descripcion,
         'genero': genero,
-        'privacidad': privacidad,
       });
 
       await _cargarClubs();
@@ -189,6 +158,7 @@ class _ClubsState extends State<Clubs> {
     try {
       await _servicioFirestore.unirseAClub(clubId);
       
+      // Actualizar la lista de clubs
       await _cargarClubs();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -210,6 +180,8 @@ class _ClubsState extends State<Clubs> {
   }
 
   Widget _construirTarjetaClub(Map<String, dynamic> club) {
+    final rol = club['rol'] ?? 'miembro';
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -293,6 +265,7 @@ class _ClubsState extends State<Clubs> {
                   arguments: {
                     'clubId': club['id'],
                     'clubNombre': club['nombre'],
+                    'rolUsuario': rol,
                   },
                 );
               },
