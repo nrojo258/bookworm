@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
 import '../modelos/datos_usuario.dart'; 
@@ -24,6 +24,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
+  final _googleSignIn = GoogleSignIn();
   
   @override
   void dispose() {
@@ -127,6 +128,65 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
       }
     }
   } 
+
+  Future<void> _iniciarSesionConGoogle() async {
+    setState(() => _estaCargando = true);
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // El usuario canceló el sign in
+        setState(() => _estaCargando = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
+
+      if (user != null) {
+        // Verificar si es un usuario nuevo
+        final servicioFirestore = ServicioFirestore();
+        final datosUsuarioExistente = await servicioFirestore.obtenerDatosUsuario(user.uid);
+        
+        if (datosUsuarioExistente == null) {
+          // Usuario nuevo, crear documento
+          final datosUsuario = DatosUsuario(
+            uid: user.uid,
+            nombre: user.displayName ?? 'Usuario',
+            correo: user.email ?? '',
+            fechaCreacion: DateTime.now(),
+            preferencias: {
+              'generos': [],
+              'formatos': ['fisico', 'audio'],
+              'notificaciones': true,
+            },
+            estadisticas: {
+              'librosLeidos': 0,
+              'tiempoLectura': 0, 
+              'rachaActual': 0, 
+              'paginasTotales': 0,
+            },
+            generosFavoritos: [],
+          );
+          await servicioFirestore.crearUsuario(datosUsuario);
+        }
+
+        _mostrarSnackBar('¡Bienvenido!', Colors.green);
+        _navegarAInicio();
+      }
+    } on FirebaseAuthException catch (e) {
+      _manejarErrorFirebase(e);
+    } catch (e) {
+      _mostrarSnackBar('Error al iniciar sesión con Google: $e', Colors.red);
+    } finally {
+      if (mounted) setState(() => _estaCargando = false);
+    }
+  }
 
   void _manejarErrorFirebase(FirebaseAuthException e) {
     final mensajesError = {
@@ -284,6 +344,20 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
             ),
           ),
         ],
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: OutlinedButton.icon(
+          onPressed: _estaCargando ? null : _iniciarSesionConGoogle,
+          icon: const Icon(Icons.g_mobiledata, color: Colors.red), // Icono aproximado para Google
+          label: const Text('Continuar con Google'),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Colors.grey),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
       ),
     ];
   }
