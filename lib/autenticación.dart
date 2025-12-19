@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
 import '../modelos/datos_usuario.dart'; 
+import 'package:flutter/services.dart'; // Añadido para PlatformException
 
 class Autenticacion extends StatefulWidget {
   const Autenticacion({super.key});
@@ -24,7 +27,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
-  final _googleSignIn = GoogleSignIn();
+  final GoogleSignIn? _googleSignIn = !kIsWeb && (Platform.isAndroid || Platform.isIOS) ? GoogleSignIn.standard() : null;
   
   @override
   void dispose() {
@@ -38,6 +41,8 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   void _alternarModoAuth() {
     setState(() {
       _esLogin = !_esLogin;
+      _controladorConfirmarPassword.clear();
+      _controladorNombre.clear();
       ScaffoldMessenger.of(context).clearSnackBars();
     });
   }
@@ -58,24 +63,44 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   }
 
   bool _validarFormulario() {
-    if (_controladorEmail.text.isEmpty || _controladorPassword.text.isEmpty) {
-      _mostrarSnackBar('Completa todos los campos', Colors.red);
+    // Validar email
+    final email = _controladorEmail.text.trim();
+    if (email.isEmpty) {
+      _mostrarSnackBar('Ingresa tu correo electrónico', Colors.red);
       return false;
     }
+    
+    // Validar formato de email
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!emailRegex.hasMatch(email)) {
+      _mostrarSnackBar('Ingresa un correo electrónico válido', Colors.red);
+      return false;
+    }
+    
+    // Validar contraseña
+    if (_controladorPassword.text.isEmpty) {
+      _mostrarSnackBar('Ingresa tu contraseña', Colors.red);
+      return false;
+    }
+    
+    if (_controladorPassword.text.length < 6) {
+      _mostrarSnackBar('La contraseña debe tener al menos 6 caracteres', Colors.red);
+      return false;
+    }
+    
+    // Validaciones para registro
     if (!_esLogin) {
-      if (_controladorNombre.text.isEmpty) {
+      if (_controladorNombre.text.trim().isEmpty) {
         _mostrarSnackBar('Ingresa tu nombre', Colors.red);
         return false;
       }
+      
       if (_controladorPassword.text != _controladorConfirmarPassword.text) {
         _mostrarSnackBar('Las contraseñas no coinciden', Colors.red);
         return false;
       }
     }
-    if (_controladorPassword.text.length < 6) {
-      _mostrarSnackBar('La contraseña debe tener al menos 6 caracteres', Colors.red);
-      return false;
-    }
+    
     return true;
   }
 
@@ -107,14 +132,12 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
           'formatos': ['fisico', 'audio'],
           'notificaciones': true,
         },
-
         estadisticas: {
           'librosLeidos': 0,
           'tiempoLectura': 0, 
           'rachaActual': 0, 
           'paginasTotales': 0,
         },
-        
         generosFavoritos: [],
       );
 
@@ -124,40 +147,80 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
         _navegarAInicio();
       } catch (e) {
+        // Si falla Firestore, eliminar el usuario de Auth para consistencia
+        await credencialUsuario.user!.delete();
         _mostrarSnackBar('Error al guardar datos: $e', Colors.red);
+        rethrow;
       }
     }
   } 
 
   Future<void> _iniciarSesionConGoogle() async {
     setState(() => _estaCargando = true);
+    
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // El usuario canceló el sign in
-        setState(() => _estaCargando = false);
-        return;
+      UserCredential userCredential;
+      
+      if (kIsWeb) {
+        // --- Para Web ---
+        // Usar GoogleAuthProvider directamente
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        
+        // Configuraciones opcionales para personalizar la experiencia
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        
+        // Opción 1: Usar signInWithPopup (recomendado para desarrollo)
+        userCredential = await _auth.signInWithPopup(googleProvider);
+        
+        // Opción 2: Para producción, puedes considerar signInWithRedirect
+        // userCredential = await _auth.signInWithRedirect(googleProvider);
+        
+      } else {
+        // --- Para Móvil (Android/iOS) ---
+        if (_googleSignIn == null) {
+          throw PlatformException(
+            code: 'UNSUPPORTED_PLATFORM',
+            message: 'Google Sign-In no está disponible en esta plataforma'
+          );
+        }
+        
+        // Iniciar el flujo de Google Sign-In
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          // Usuario canceló el inicio de sesión
+          setState(() => _estaCargando = false);
+          return;
+        }
+        
+        // Obtener tokens de autenticación
+        final GoogleSignInAuthentication googleAuth = 
+            await googleUser.authentication;
+            
+        // Crear credencial de Firebase con los tokens
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        
+        // Iniciar sesión en Firebase con la credencial
+        userCredential = await _auth.signInWithCredential(credential);
       }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      
+      // Procesar el usuario después del inicio de sesión exitoso
       final User? user = userCredential.user;
-
+      
       if (user != null) {
         // Verificar si es un usuario nuevo
         final servicioFirestore = ServicioFirestore();
-        final datosUsuarioExistente = await servicioFirestore.obtenerDatosUsuario(user.uid);
+        final datosUsuarioExistente = 
+            await servicioFirestore.obtenerDatosUsuario(user.uid);
         
         if (datosUsuarioExistente == null) {
-          // Usuario nuevo, crear documento
+          // Usuario nuevo, crear documento en Firestore
           final datosUsuario = DatosUsuario(
             uid: user.uid,
-            nombre: user.displayName ?? 'Usuario',
+            nombre: user.displayName ?? _extraerNombreDeEmail(user.email ?? 'Usuario'),
             correo: user.email ?? '',
             fechaCreacion: DateTime.now(),
             preferencias: {
@@ -167,25 +230,86 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
             },
             estadisticas: {
               'librosLeidos': 0,
-              'tiempoLectura': 0, 
-              'rachaActual': 0, 
+              'tiempoLectura': 0,
+              'rachaActual': 0,
               'paginasTotales': 0,
             },
             generosFavoritos: [],
           );
+          
           await servicioFirestore.crearUsuario(datosUsuario);
+          _mostrarSnackBar('¡Bienvenido! Tu cuenta ha sido creada.', Colors.green);
+        } else {
+          _mostrarSnackBar('¡Bienvenido de vuelta!', Colors.green);
         }
-
-        _mostrarSnackBar('¡Bienvenido!', Colors.green);
+        
         _navegarAInicio();
       }
+      
     } on FirebaseAuthException catch (e) {
-      _manejarErrorFirebase(e);
+      // Manejo específico de errores de Firebase
+      if (e.code == 'account-exists-with-different-credential') {
+        // El correo ya existe con otro proveedor de autenticación
+        _mostrarSnackBar(
+          'Esta cuenta ya existe con otro método de inicio de sesión. '
+          'Por favor, inicia sesión con el método original.',
+          Colors.orange
+        );
+        
+        // Puedes implementar un flujo de vinculación aquí si lo necesitas
+        // await _vincularCuentaConGoogle(e.email!);
+        
+      } else if (e.code == 'popup-blocked') {
+        _mostrarSnackBar(
+          'El navegador bloqueó la ventana emergente. '
+          'Por favor, permite ventanas emergentes para este sitio.',
+          Colors.orange
+        );
+        
+      } else if (e.code == 'popup-closed-by-user') {
+        // El usuario cerró la ventana, no es un error
+        // Solo resetear el estado de carga
+        
+      } else if (e.code == 'unauthorized-domain') {
+        _mostrarSnackBar(
+          'Este dominio no está autorizado para Google Sign-In. '
+          'Por favor, contacta al administrador.',
+          Colors.red
+        );
+        
+      } else {
+        _manejarErrorFirebase(e);
+      }
+      
+    } on PlatformException catch (e) {
+      // Para errores de plataforma
+      if (e.code != 'sign_in_canceled' && e.code != 'ERROR_SIGN_IN_CANCELLED') {
+        _mostrarSnackBar('Error de plataforma: ${e.message}', Colors.red);
+      }
+      
     } catch (e) {
-      _mostrarSnackBar('Error al iniciar sesión con Google: $e', Colors.red);
+      _mostrarSnackBar('Error inesperado al iniciar sesión con Google: $e', Colors.red);
+      print('Error detallado: $e');
+      
     } finally {
-      if (mounted) setState(() => _estaCargando = false);
+      if (mounted) {
+        setState(() => _estaCargando = false);
+      }
     }
+  }
+  
+  String _extraerNombreDeEmail(String email) {
+    // Extraer la parte antes del @ como nombre por defecto
+    final parts = email.split('@');
+    if (parts.isNotEmpty) {
+      return parts[0].replaceAll('.', ' ').split(' ').map((word) {
+        if (word.isNotEmpty) {
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        }
+        return '';
+      }).join(' ');
+    }
+    return 'Usuario';
   }
 
   void _manejarErrorFirebase(FirebaseAuthException e) {
@@ -195,44 +319,68 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
       'email-already-in-use': 'Ya existe una cuenta con este email',
       'weak-password': 'La contraseña es demasiado débil',
       'invalid-email': 'El formato del email no es válido',
-      'network-request-failed': 'Error de conexión',
-      'too-many-requests': 'Demasiados intentos. Intenta más tarde',
+      'network-request-failed': 'Error de conexión a internet. Verifica tu conexión',
+      'too-many-requests': 'Demasiados intentos fallidos. Intenta más tarde',
+      'user-disabled': 'Esta cuenta ha sido deshabilitada',
+      'operation-not-allowed': 'Este método de inicio de sesión no está habilitado',
+      'requires-recent-login': 'Esta operación requiere inicio de sesión reciente',
     };
     
     _mostrarSnackBar(mensajesError[e.code] ?? 'Error: ${e.message}', Colors.red);
   }
 
   void _mostrarSnackBar(String mensaje, Color color) {
+    ScaffoldMessenger.of(context).clearSnackBars(); // Limpiar anteriores
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensaje),
+        content: Text(mensaje, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: color == Colors.green ? 2 : 3),
+        duration: Duration(seconds: color == Colors.green ? 3 : 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   void _navegarAInicio() {
-    Navigator.pushReplacementNamed(context, '/home');
+    // Pequeño delay para que el usuario vea el mensaje de éxito
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    });
   }
 
   Widget _construirCampoTexto(TextEditingController controlador, String etiqueta, IconData icono, 
-  {bool textoOculto = false, VoidCallback? alAlternarVisibilidad}) {
+  {bool textoOculto = false, VoidCallback? alAlternarVisibilidad, TextInputType? tipoTeclado}) {
     return TextFormField(
       controller: controlador,
       decoration: InputDecoration(
         labelText: etiqueta,
+        labelStyle: const TextStyle(color: Colors.grey),
         prefixIcon: Icon(icono, color: AppColores.primario),
         suffixIcon: alAlternarVisibilidad != null ? IconButton(
-          icon: Icon(textoOculto ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+          icon: Icon(textoOculto ? Icons.visibility_off : Icons.visibility, 
+                     color: AppColores.primario.withOpacity(0.7)),
           onPressed: alAlternarVisibilidad,
         ) : null,
-        border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColores.primario)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColores.primario, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       ),
       obscureText: textoOculto,
       enabled: !_estaCargando,
+      keyboardType: tipoTeclado,
+      style: const TextStyle(fontSize: 16),
     );
   }
 
@@ -245,74 +393,167 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
             colors: [AppColores.primario, AppColores.secundario],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
+            stops: [0.0, 1.0],
           ),
         ),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Tarjeta de autenticación
                 Container(
                   width: 400,
+                  constraints: const BoxConstraints(maxWidth: 400),
                   padding: const EdgeInsets.all(30),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
-                      const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: AppColores.primario,
-                        child: Icon(Icons.menu_book_rounded, size: 50, color: Colors.white),
+                      // Logo/Icono
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: AppColores.primario.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColores.primario, width: 3),
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          size: 50,
+                          color: AppColores.primario,
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      Text(_esLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: EstilosApp.tituloMedio),
-                      const SizedBox(height: 10),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Título
                       Text(
-                        _esLogin ? 'Bienvenido de vuelta' : 'Únete a nuestra comunidad',
-                        style: EstilosApp.cuerpoMedio,
+                        _esLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 10),
+                      
+                      // Subtítulo
+                      Text(
+                        _esLogin 
+                            ? 'Bienvenido de vuelta a tu biblioteca personal'
+                            : 'Únete a nuestra comunidad de lectores',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                          height: 1.4,
+                        ),
                         textAlign: TextAlign.center,
                       ),
+                      
                       const SizedBox(height: 30),
                       
+                      // Campos del formulario
                       if (!_esLogin) ...[
-                        _construirCampoTexto(_controladorNombre, 'Nombre', Icons.person),
-                        const SizedBox(height: 15),
+                        _construirCampoTexto(
+                          _controladorNombre, 
+                          'Nombre completo', 
+                          Icons.person_outline,
+                          tipoTeclado: TextInputType.name,
+                        ),
+                        const SizedBox(height: 20),
                       ],
                       
-                      _construirCampoTexto(_controladorEmail, 'Correo electrónico', Icons.email),
-                      const SizedBox(height: 15),
+                      _construirCampoTexto(
+                        _controladorEmail, 
+                        'Correo electrónico', 
+                        Icons.email_outlined,
+                        tipoTeclado: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 20),
                       
-                      _construirCampoTexto(_controladorPassword, 'Contraseña', Icons.lock,
+                      _construirCampoTexto(
+                        _controladorPassword, 
+                        'Contraseña', 
+                        Icons.lock_outline,
                         textoOculto: _passwordOculta,
                         alAlternarVisibilidad: _estaCargando ? null : () => setState(() => _passwordOculta = !_passwordOculta),
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
                       
                       if (!_esLogin) ...[
-                        _construirCampoTexto(_controladorConfirmarPassword, 'Confirmar contraseña', Icons.lock_outline,
+                        _construirCampoTexto(
+                          _controladorConfirmarPassword, 
+                          'Confirmar contraseña', 
+                          Icons.lock_reset,
                           textoOculto: _confirmarPasswordOculta,
                           alAlternarVisibilidad: _estaCargando ? null : () => setState(() => _confirmarPasswordOculta = !_confirmarPasswordOculta),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 20),
                       ],
                       
+                      // Botón principal
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 55,
                         child: _estaCargando
-                            ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario)))
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColores.primario),
+                                  strokeWidth: 3,
+                                ),
+                              )
                             : ElevatedButton(
                                 onPressed: _enviarFormulario,
-                                style: EstilosApp.botonPrimario,
-                                child: Text(_esLogin ? 'Iniciar Sesión' : 'Crear Cuenta', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColores.primario,
+                                  foregroundColor: Colors.white,
+                                  elevation: 5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 15),
+                                ),
+                                child: Text(
+                                  _esLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
                       ),
+                      
+                      // Elementos adicionales
                       if (!_estaCargando) ..._construirPieAuth(),
                     ],
                   ),
+                ),
+                
+                // Información adicional (fuera de la tarjeta)
+                const SizedBox(height: 30),
+                
+                Text(
+                  'Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -324,41 +565,99 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
 
   List<Widget> _construirPieAuth() {
     return [
-      const SizedBox(height: 20),
-      const Row(children: [
-        Expanded(child: Divider(color: Colors.grey)),
-        Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('O', style: TextStyle(color: Colors.grey))),
-        Expanded(child: Divider(color: Colors.grey)),
-      ]),
-      const SizedBox(height: 20),
+      const SizedBox(height: 25),
+      
+      // Separador
       Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(_esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?', style: EstilosApp.cuerpoMedio),
-          const SizedBox(width: 5),
-          GestureDetector(
-            onTap: _estaCargando ? null : _alternarModoAuth,
+          Expanded(
+            child: Divider(
+              color: Colors.grey[300],
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
             child: Text(
-              _esLogin ? 'Regístrate' : 'Inicia Sesión',
-              style: const TextStyle(color: AppColores.primario, fontWeight: FontWeight.bold),
+              'O continúa con',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: Colors.grey[300],
+              thickness: 1,
             ),
           ),
         ],
       ),
-      const SizedBox(height: 20),
+      
+      const SizedBox(height: 25),
+      
+      // Botón de Google
       SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 55,
         child: OutlinedButton.icon(
           onPressed: _estaCargando ? null : _iniciarSesionConGoogle,
-          icon: const Icon(Icons.g_mobiledata, color: Colors.red), // Icono aproximado para Google
-          label: const Text('Continuar con Google'),
+          icon: Image.asset(
+            'assets/google_logo.png', // Asegúrate de tener este archivo en assets/
+            width: 24,
+            height: 24,
+            errorBuilder: (context, error, stackTrace) => 
+                const Icon(Icons.g_mobiledata, color: Colors.red),
+          ),
+          label: const Text(
+            'Continuar con Google',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Colors.grey),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            side: BorderSide(color: Colors.grey[300]!),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+            elevation: 1,
           ),
         ),
       ),
+      
+      const SizedBox(height: 25),
+      
+      // Enlace para alternar entre login/registro
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            _esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _estaCargando ? null : _alternarModoAuth,
+            child: Text(
+              _esLogin ? 'Regístrate aquí' : 'Inicia sesión aquí',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColores.primario,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ),
+      
+      const SizedBox(height: 10),
     ];
   }
 }
