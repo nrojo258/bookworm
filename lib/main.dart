@@ -139,7 +139,7 @@ class PaginaInicio extends StatelessWidget {
             
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -160,7 +160,7 @@ class PaginaInicio extends StatelessWidget {
                     itemCount: DatosApp.accionesRapidas.length,
                     itemBuilder: (BuildContext context, int index) {
                       return Container(
-                        decoration: EstilosApp.decoracionTarjetaPlana,
+                        decoration: EstilosApp.tarjetaPlana,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -193,7 +193,7 @@ class PaginaInicio extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: EstilosApp.decoracionTarjeta,
+                    decoration: EstilosApp.tarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -220,7 +220,7 @@ class PaginaInicio extends StatelessWidget {
                   child: Container(
                     height: 280,
                     padding: const EdgeInsets.all(24),
-                    decoration: EstilosApp.decoracionTarjeta,
+                    decoration: EstilosApp.tarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[

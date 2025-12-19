@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
-import 'API/modelos.dart';
+import '../API/modelos.dart';
 
 class BotonesBarraApp extends StatelessWidget {
   final String rutaActual;
@@ -258,7 +258,7 @@ class TarjetaLibro extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
-        decoration: EstilosApp.decoracionTarjetaPlana,
+        decoration: EstilosApp.tarjetaPlana,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

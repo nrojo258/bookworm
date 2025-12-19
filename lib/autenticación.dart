@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
 import '../modelos/datos_usuario.dart'; 
-import 'package:flutter/services.dart'; // Añadido para PlatformException
 
 class Autenticacion extends StatefulWidget {
   const Autenticacion({super.key});

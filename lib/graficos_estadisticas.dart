@@ -86,7 +86,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
@@ -144,7 +144,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: PieChart(
         PieChartData(
           sections: _construirDatosTortaGeneros(),
@@ -160,7 +160,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: LineChart(
         LineChartData(
           lineTouchData: LineTouchData(enabled: true),
@@ -221,7 +221,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Row(
                 children: [
                   Expanded(
@@ -258,7 +258,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

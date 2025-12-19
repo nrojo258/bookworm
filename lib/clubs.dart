@@ -185,7 +185,7 @@ class _ClubsState extends State<Clubs> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -296,7 +296,7 @@ class _ClubsState extends State<Clubs> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -335,7 +335,7 @@ class _ClubsState extends State<Clubs> {
 
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Row(children: [
                 Expanded(child: BotonSeccion(
                   texto: 'Descubrir clubs',
@@ -371,7 +371,7 @@ class _ClubsState extends State<Clubs> {
     if (_cargandoClubs) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.decoracionTarjeta,
+        decoration: EstilosApp.tarjeta,
         child: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -379,7 +379,7 @@ class _ClubsState extends State<Clubs> {
     if (_clubsRecomendados.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.decoracionTarjeta,
+        decoration: EstilosApp.tarjeta,
         child: const EstadoVacio(
           icono: Icons.group,
           titulo: 'No se encontraron clubs',
@@ -390,7 +390,7 @@ class _ClubsState extends State<Clubs> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -411,7 +411,7 @@ class _ClubsState extends State<Clubs> {
     if (_cargandoClubs) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.decoracionTarjeta,
+        decoration: EstilosApp.tarjeta,
         child: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -419,7 +419,7 @@ class _ClubsState extends State<Clubs> {
     if (_misClubs.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.decoracionTarjeta,
+        decoration: EstilosApp.tarjeta,
         child: const EstadoVacio(
           icono: Icons.group_add,
           titulo: 'No tienes clubs activos',
@@ -430,7 +430,7 @@ class _ClubsState extends State<Clubs> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

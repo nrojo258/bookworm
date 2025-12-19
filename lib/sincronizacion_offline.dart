@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../modelos/datos_usuario.dart';
 import '../modelos/progreso_lectura.dart';
 
 class SincronizacionOffline {
@@ -87,7 +87,7 @@ class SincronizacionOffline {
         } 
         
         catch (e) {
-          print('Error sincronizando progreso: $e');
+          debugPrint('Error sincronizando progreso: $e');
         }
       }
       await guardarLocalmente('progresos_pendientes', []);
@@ -105,7 +105,7 @@ class SincronizacionOffline {
         } 
         
         catch (e) {
-          print('Error sincronizando mensaje: $e');
+          debugPrint('Error sincronizando mensaje: $e');
         }
       }
       await guardarLocalmente('mensajes_pendientes', []);
@@ -220,7 +220,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error sincronizando: $e'),
-          backgroundColor: AppColores.rojo,
+          backgroundColor: AppColores.error,
         ),
       );
     } finally {
@@ -241,7 +241,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -249,7 +249,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
                     children: [
                       Icon(
                         _tieneConexion ? Icons.wifi : Icons.wifi_off,
-                        color: _tieneConexion ? AppColores.secundario : AppColores.rojo,
+                        color: _tieneConexion ? AppColores.secundario : AppColores.error,
                         size: 32,
                       ),
                       const SizedBox(width: 16),
@@ -296,7 +296,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

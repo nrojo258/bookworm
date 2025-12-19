@@ -51,7 +51,7 @@ class _PerfilState extends State<Perfil> {
     if (_estaCargando) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.decoracionTarjeta,
+        decoration: EstilosApp.tarjeta,
         child: const Center(
           child: CircularProgressIndicator(),
         ),
@@ -60,7 +60,7 @@ class _PerfilState extends State<Perfil> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         children: [
           Row(
@@ -127,7 +127,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirSelectorSeccion() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Row(children: [
         for (int i = 0; i < DatosApp.seccionesPerfil.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
@@ -155,7 +155,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirSeccionInformacion() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -203,7 +203,7 @@ class _PerfilState extends State<Perfil> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -256,7 +256,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirSeccionProgreso() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -348,7 +348,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirTarjetaProgreso(String titulo, String subtitulo, String estado, IconData icono) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: Row(
         children: [
           Container(
@@ -395,7 +395,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirSeccionEstadisticas() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -405,7 +405,7 @@ class _PerfilState extends State<Perfil> {
           Container(
             height: 200,
             padding: const EdgeInsets.all(20),
-            decoration: EstilosApp.decoracionTarjetaPlana,
+            decoration: EstilosApp.tarjetaPlana,
             child: const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -444,7 +444,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirTarjetaEstadistica(String titulo, String valor, IconData icono) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: EstilosApp.decoracionTarjetaPlana,
+      decoration: EstilosApp.tarjetaPlana,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -461,7 +461,7 @@ class _PerfilState extends State<Perfil> {
   Widget _construirSeccionConfiguracion() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.decoracionTarjeta,
+      decoration: EstilosApp.tarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

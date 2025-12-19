@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import 'API/modelos.dart';
-import 'API/open_library.dart';
+import '../API/modelos.dart';
+import '../API/open_library.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
@@ -80,7 +80,7 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
-  Widget _SeccionResultados() {
+  Widget _seccionResultados() {
     if (_estaCargando) {
       return const IndicadorCarga(mensaje: 'Buscando libros...');
     }
@@ -114,14 +114,14 @@ class _BuscarState extends State<Buscar> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColores.primario.withOpacity(0.1),
+                color: Color.fromRGBO(74, 111, 165, 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        ..._resultadosBusqueda.map((libro) => TarjetaLibro(libro: libro)).toList(),
+        ..._resultadosBusqueda.map((libro) => TarjetaLibro(libro: libro)),
       ],
     );
   }
@@ -143,7 +143,7 @@ class _BuscarState extends State<Buscar> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -205,7 +205,7 @@ class _BuscarState extends State<Buscar> {
 
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.decoracionTarjeta,
+              decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -214,7 +214,7 @@ class _BuscarState extends State<Buscar> {
                     style: EstilosApp.tituloMedio,
                   ),
                   const SizedBox(height: 16),
-                  _SeccionResultados(),
+                  _seccionResultados(),
                 ],
               ),
             ),
