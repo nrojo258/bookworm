@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
@@ -27,7 +26,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
-  final GoogleSignIn? _googleSignIn = !kIsWeb && (Platform.isAndroid || Platform.isIOS) ? GoogleSignIn.standard() : null;
   
   @override
   void dispose() {
@@ -153,163 +151,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         rethrow;
       }
     }
-  } 
-
-  Future<void> _iniciarSesionConGoogle() async {
-    setState(() => _estaCargando = true);
-    
-    try {
-      UserCredential userCredential;
-      
-      if (kIsWeb) {
-        // --- Para Web ---
-        // Usar GoogleAuthProvider directamente
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        
-        // Configuraciones opcionales para personalizar la experiencia
-        googleProvider.addScope('email');
-        googleProvider.addScope('profile');
-        
-        // Opción 1: Usar signInWithPopup (recomendado para desarrollo)
-        userCredential = await _auth.signInWithPopup(googleProvider);
-        
-        // Opción 2: Para producción, puedes considerar signInWithRedirect
-        // userCredential = await _auth.signInWithRedirect(googleProvider);
-        
-      } else {
-        // --- Para Móvil (Android/iOS) ---
-        if (_googleSignIn == null) {
-          throw PlatformException(
-            code: 'UNSUPPORTED_PLATFORM',
-            message: 'Google Sign-In no está disponible en esta plataforma'
-          );
-        }
-        
-        // Iniciar el flujo de Google Sign-In
-        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          // Usuario canceló el inicio de sesión
-          setState(() => _estaCargando = false);
-          return;
-        }
-        
-        // Obtener tokens de autenticación
-        final GoogleSignInAuthentication googleAuth = 
-            await googleUser.authentication;
-            
-        // Crear credencial de Firebase con los tokens
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        
-        // Iniciar sesión en Firebase con la credencial
-        userCredential = await _auth.signInWithCredential(credential);
-      }
-      
-      // Procesar el usuario después del inicio de sesión exitoso
-      final User? user = userCredential.user;
-      
-      if (user != null) {
-        // Verificar si es un usuario nuevo
-        final servicioFirestore = ServicioFirestore();
-        final datosUsuarioExistente = 
-            await servicioFirestore.obtenerDatosUsuario(user.uid);
-        
-        if (datosUsuarioExistente == null) {
-          // Usuario nuevo, crear documento en Firestore
-          final datosUsuario = DatosUsuario(
-            uid: user.uid,
-            nombre: user.displayName ?? _extraerNombreDeEmail(user.email ?? 'Usuario'),
-            correo: user.email ?? '',
-            fechaCreacion: DateTime.now(),
-            preferencias: {
-              'generos': [],
-              'formatos': ['fisico', 'audio'],
-              'notificaciones': true,
-            },
-            estadisticas: {
-              'librosLeidos': 0,
-              'tiempoLectura': 0,
-              'rachaActual': 0,
-              'paginasTotales': 0,
-            },
-            generosFavoritos: [],
-          );
-          
-          await servicioFirestore.crearUsuario(datosUsuario);
-          _mostrarSnackBar('¡Bienvenido! Tu cuenta ha sido creada.', Colors.green);
-        } else {
-          _mostrarSnackBar('¡Bienvenido de vuelta!', Colors.green);
-        }
-        
-        _navegarAInicio();
-      }
-      
-    } on FirebaseAuthException catch (e) {
-      // Manejo específico de errores de Firebase
-      if (e.code == 'account-exists-with-different-credential') {
-        // El correo ya existe con otro proveedor de autenticación
-        _mostrarSnackBar(
-          'Esta cuenta ya existe con otro método de inicio de sesión. '
-          'Por favor, inicia sesión con el método original.',
-          Colors.orange
-        );
-        
-        // Puedes implementar un flujo de vinculación aquí si lo necesitas
-        // await _vincularCuentaConGoogle(e.email!);
-        
-      } else if (e.code == 'popup-blocked') {
-        _mostrarSnackBar(
-          'El navegador bloqueó la ventana emergente. '
-          'Por favor, permite ventanas emergentes para este sitio.',
-          Colors.orange
-        );
-        
-      } else if (e.code == 'popup-closed-by-user') {
-        // El usuario cerró la ventana, no es un error
-        // Solo resetear el estado de carga
-        
-      } else if (e.code == 'unauthorized-domain') {
-        _mostrarSnackBar(
-          'Este dominio no está autorizado para Google Sign-In. '
-          'Por favor, contacta al administrador.',
-          Colors.red
-        );
-        
-      } else {
-        _manejarErrorFirebase(e);
-      }
-      
-    } on PlatformException catch (e) {
-      // Para errores de plataforma
-      if (e.code != 'sign_in_canceled' && e.code != 'ERROR_SIGN_IN_CANCELLED') {
-        _mostrarSnackBar('Error de plataforma: ${e.message}', Colors.red);
-      }
-      
-    } catch (e) {
-      _mostrarSnackBar('Error inesperado al iniciar sesión con Google: $e', Colors.red);
-      print('Error detallado: $e');
-      
-    } finally {
-      if (mounted) {
-        setState(() => _estaCargando = false);
-      }
-    }
-  }
-  
-  String _extraerNombreDeEmail(String email) {
-    // Extraer la parte antes del @ como nombre por defecto
-    final parts = email.split('@');
-    if (parts.isNotEmpty) {
-      return parts[0].replaceAll('.', ' ').split(' ').map((word) {
-        if (word.isNotEmpty) {
-          return word[0].toUpperCase() + word.substring(1).toLowerCase();
-        }
-        return '';
-      }).join(' ');
-    }
-    return 'Usuario';
   }
 
   void _manejarErrorFirebase(FirebaseAuthException e) {
@@ -565,69 +406,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
 
   List<Widget> _construirPieAuth() {
     return [
-      const SizedBox(height: 25),
-      
-      // Separador
-      Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: Text(
-              'O continúa con',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-        ],
-      ),
-      
-      const SizedBox(height: 25),
-      
-      // Botón de Google
-      SizedBox(
-        width: double.infinity,
-        height: 55,
-        child: OutlinedButton.icon(
-          onPressed: _estaCargando ? null : _iniciarSesionConGoogle,
-          icon: Image.asset(
-            'assets/google_logo.png', // Asegúrate de tener este archivo en assets/
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => 
-                const Icon(Icons.g_mobiledata, color: Colors.red),
-          ),
-          label: const Text(
-            'Continuar con Google',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.grey[300]!),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            elevation: 1,
-          ),
-        ),
-      ),
-      
       const SizedBox(height: 25),
       
       // Enlace para alternar entre login/registro

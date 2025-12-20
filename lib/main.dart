@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'autenticación.dart';
@@ -13,7 +14,9 @@ import 'sincronizacion_offline.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (!kIsWeb) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   runApp(const AppBookWorm());
 }
 
@@ -27,10 +30,10 @@ class AppBookWorm extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColores.primario,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColores.primario),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 74, 111, 165)),
         scaffoldBackgroundColor: AppColores.fondo,
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColores.primario, 
+          backgroundColor: Color.fromARGB(255, 74, 111, 165), 
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -61,8 +64,15 @@ class AppBookWorm extends StatelessWidget {
   }
 }
 
-class PaginaInicio extends StatelessWidget {
+class PaginaInicio extends StatefulWidget {
   const PaginaInicio({super.key});
+
+  @override
+  State<PaginaInicio> createState() => _PaginaInicioState();
+}
+
+class _PaginaInicioState extends State<PaginaInicio> {
+  bool _mostrarTodosAccesosRapidos = false;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +167,7 @@ class PaginaInicio extends StatelessWidget {
                       mainAxisSpacing: 16,
                       childAspectRatio: 1.0,
                     ),
-                    itemCount: DatosApp.accionesRapidas.length,
+                    itemCount: _mostrarTodosAccesosRapidos ? DatosApp.accionesRapidas.length : 4,
                     itemBuilder: (BuildContext context, int index) {
                       return Container(
                         decoration: EstilosApp.tarjetaPlana,
@@ -179,6 +189,23 @@ class PaginaInicio extends StatelessWidget {
                         ),
                       );
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _mostrarTodosAccesosRapidos = !_mostrarTodosAccesosRapidos;
+                        });
+                      },
+                      child: Text(
+                        _mostrarTodosAccesosRapidos ? 'Ver menos' : 'Ver más',
+                        style: const TextStyle(
+                          color: AppColores.primario,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

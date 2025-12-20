@@ -46,6 +46,241 @@ class _PerfilState extends State<Perfil> {
       });
     }
   }
+
+  void _mostrarDialogoEditarPerfil() {
+    final TextEditingController controladorNombre = TextEditingController(text: _datosUsuario?.nombre ?? '');
+    final TextEditingController controladorCorreo = TextEditingController(text: _datosUsuario?.correo ?? '');
+    final TextEditingController controladorBiografia = TextEditingController(text: _datosUsuario?.biografia ?? '');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Editar Perfil'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controladorNombre,
+                  decoration: const InputDecoration(labelText: 'Nombre completo'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controladorCorreo,
+                  decoration: const InputDecoration(labelText: 'Correo electrónico'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controladorBiografia,
+                  decoration: const InputDecoration(labelText: 'Biografía'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final nuevosDatos = {
+                  'nombre': controladorNombre.text.trim(),
+                  'correo': controladorCorreo.text.trim(),
+                  'biografia': controladorBiografia.text.trim(),
+                };
+                try {
+                  await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, nuevosDatos);
+                  await _cargarDatosUsuario(); // Recargar datos
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Perfil actualizado correctamente')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al actualizar perfil: $e')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _cambiarNotificaciones(bool valor) async {
+    try {
+      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+        'preferencias': {
+          ...?_datosUsuario?.preferencias,
+          'notificaciones': valor,
+        }
+      });
+      await _cargarDatosUsuario();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Notificaciones ${valor ? 'activadas' : 'desactivadas'}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al cambiar notificaciones')),
+      );
+    }
+  }
+
+  void _mostrarDialogoPrivacidad() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Configuración de Privacidad'),
+          content: const Text('Aquí puedes configurar tu privacidad. Esta funcionalidad estará disponible próximamente.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _mostrarDialogoIdioma() {
+    String idiomaSeleccionado = 'es'; // Por defecto español
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleccionar Idioma'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Español'),
+                value: 'es',
+                groupValue: idiomaSeleccionado,
+                onChanged: (value) {
+                  setState(() => idiomaSeleccionado = value!);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('English'),
+                value: 'en',
+                groupValue: idiomaSeleccionado,
+                onChanged: (value) {
+                  setState(() => idiomaSeleccionado = value!);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Aquí iría la lógica para cambiar el idioma
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Idioma cambiado a ${idiomaSeleccionado == 'es' ? 'Español' : 'English'}')),
+                );
+                Navigator.of(context).pop();
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _mostrarDialogoTema() {
+    String temaSeleccionado = 'claro'; // Por defecto claro
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleccionar Tema'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Claro'),
+                value: 'claro',
+                groupValue: temaSeleccionado,
+                onChanged: (value) {
+                  setState(() => temaSeleccionado = value!);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Oscuro'),
+                value: 'oscuro',
+                groupValue: temaSeleccionado,
+                onChanged: (value) {
+                  setState(() => temaSeleccionado = value!);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Aquí iría la lógica para cambiar el tema
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Tema cambiado a ${temaSeleccionado == 'claro' ? 'Claro' : 'Oscuro'}')),
+                );
+                Navigator.of(context).pop();
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _sincronizarDatos() async {
+    // Simular sincronización
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sincronizando datos...')),
+    );
+    
+    // Aquí iría la lógica real de sincronización
+    await Future.delayed(const Duration(seconds: 2));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Datos sincronizados correctamente')),
+    );
+  }
+
+  void _mostrarAyuda() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ayuda y Soporte'),
+          content: const Text('Para obtener ayuda, contacta con nuestro soporte técnico o visita nuestro centro de ayuda en línea.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
   
   Widget _construirEncabezadoPerfil() {
     if (_estaCargando) {
@@ -68,7 +303,7 @@ class _PerfilState extends State<Perfil> {
             children: [
               const Text('Mi Perfil', style: EstilosApp.tituloMedio),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: _mostrarDialogoEditarPerfil,
                 style: EstilosApp.botonPrimario,
                 child: const Row(children: [
                   Icon(Icons.edit, size: 16),
@@ -176,23 +411,12 @@ class _PerfilState extends State<Perfil> {
           _construirTarjetaInfo(
             'Biografía',
             [
-              const Text(
-                'Completa tu biografía para que otros lectores te conozcan mejor.',
+              Text(
+                _datosUsuario?.biografia.isNotEmpty == true ? _datosUsuario!.biografia : 'Completa tu biografía para que otros lectores te conozcan mejor.',
                 style: EstilosApp.cuerpoMedio,
               ),
             ],
             Icons.description,
-          ),
-          const SizedBox(height: 20),
-          
-          _construirTarjetaInfo(
-            'Preferencias de Lectura',
-            [
-              _construirElementoInfo('Géneros favoritos', _datosUsuario?.generosFavoritos.join(', ') ?? 'No especificado'),
-              _construirElementoInfo('Formato preferido', _datosUsuario?.preferencias['formatos']?.join(', ') ?? 'No especificado'),
-              _construirElementoInfo('Notificaciones', _datosUsuario?.preferencias['notificaciones'] == true ? 'Activadas' : 'Desactivadas'),
-            ],
-            Icons.favorite,
           ),
         ],
       ),
@@ -473,32 +697,38 @@ class _PerfilState extends State<Perfil> {
             subtitulo: 'Gestiona las notificaciones de la app',
             icono: Icons.notifications,
             tieneSwitch: true,
-            valorSwitch: true,
+            valorSwitch: _datosUsuario?.preferencias['notificaciones'] ?? true,
+            alCambiarSwitch: _cambiarNotificaciones,
           ),
           ElementoConfiguracion(
             titulo: 'Privacidad',
             subtitulo: 'Controla tu información personal',
             icono: Icons.privacy_tip,
+            alPresionar: _mostrarDialogoPrivacidad,
           ),
           ElementoConfiguracion(
             titulo: 'Idioma',
             subtitulo: 'Español',
             icono: Icons.language,
+            alPresionar: _mostrarDialogoIdioma,
           ),
           ElementoConfiguracion(
             titulo: 'Tema',
             subtitulo: 'Claro',
             icono: Icons.palette,
+            alPresionar: _mostrarDialogoTema,
           ),
           ElementoConfiguracion(
             titulo: 'Sincronización',
             subtitulo: 'Última sincronización: hoy',
             icono: Icons.sync,
+            alPresionar: _sincronizarDatos,
           ),
           ElementoConfiguracion(
             titulo: 'Ayuda y soporte',
             subtitulo: 'Centro de ayuda y contacto',
             icono: Icons.help,
+            alPresionar: _mostrarAyuda,
           ),
           const SizedBox(height: 20),
           
@@ -513,32 +743,20 @@ class _PerfilState extends State<Perfil> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [                
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Cerrar sesión'),
+                Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
+                      child: const Text('Cerrar sesión', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Eliminar cuenta'),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),

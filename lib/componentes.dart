@@ -382,7 +382,7 @@ class ElementoConfiguracion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget content = Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
@@ -419,6 +419,15 @@ class ElementoConfiguracion extends StatelessWidget {
         ],
       ),
     );
+
+    if (alPresionar != null) {
+      return InkWell(
+        onTap: alPresionar,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 
