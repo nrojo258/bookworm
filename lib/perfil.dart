@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../servicio/servicio_firestore.dart'; 
+import '../servicio/servicio_firestore.dart';
 import '../modelos/datos_usuario.dart'; 
 
 class Perfil extends StatefulWidget {
@@ -18,6 +21,10 @@ class _PerfilState extends State<Perfil> {
   bool _estaCargando = true;
   final ServicioFirestore _servicioFirestore = ServicioFirestore();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  // Para manejo de imagen de perfil
+  File? _imagenSeleccionada;
+  bool _subiendoImagen = false;
 
   @override
   void initState() {
@@ -55,59 +62,142 @@ class _PerfilState extends State<Perfil> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Editar Perfil'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controladorNombre,
-                  decoration: const InputDecoration(labelText: 'Nombre completo'),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Editar Perfil'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Vista previa de imagen
+                    Center(
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColores.primario.withOpacity(0.1),
+                              border: Border.all(color: AppColores.primario, width: 2),
+                            ),
+                            child: _imagenSeleccionada != null
+                              ? ClipOval(
+                                  child: Image.file(
+                                    _imagenSeleccionada!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : _datosUsuario?.urlImagenPerfil != null && _datosUsuario!.urlImagenPerfil!.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.network(
+                                      _datosUsuario!.urlImagenPerfil!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => const Icon(
+                                        Icons.person,
+                                        size: 50,
+                                        color: AppColores.primario,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.person, size: 50, color: AppColores.primario),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: AppColores.primario,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                onPressed: _seleccionarImagen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: controladorNombre,
+                      decoration: const InputDecoration(labelText: 'Nombre completo'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controladorCorreo,
+                      decoration: const InputDecoration(labelText: 'Correo electrónico'),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controladorBiografia,
+                      decoration: const InputDecoration(labelText: 'Biografía'),
+                      maxLines: 3,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controladorCorreo,
-                  decoration: const InputDecoration(labelText: 'Correo electrónico'),
-                  keyboardType: TextInputType.emailAddress,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controladorBiografia,
-                  decoration: const InputDecoration(labelText: 'Biografía'),
-                  maxLines: 3,
+                ElevatedButton(
+                  onPressed: _subiendoImagen ? null : () async {
+                    String? urlImagen = _datosUsuario?.urlImagenPerfil;
+                    
+                    // Subir nueva imagen si fue seleccionada
+                    if (_imagenSeleccionada != null) {
+                      urlImagen = await _subirImagenAFirebase(_imagenSeleccionada!);
+                      if (urlImagen == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Error al subir la imagen')),
+                        );
+                        return;
+                      }
+                    }
+                    
+                    final nuevosDatos = {
+                      'nombre': controladorNombre.text.trim(),
+                      'correo': controladorCorreo.text.trim(),
+                      'biografia': controladorBiografia.text.trim(),
+                      'urlImagenPerfil': urlImagen,
+                    };
+                    
+                    try {
+                      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, nuevosDatos);
+                      await _cargarDatosUsuario(); // Recargar datos
+                      setState(() {
+                        _imagenSeleccionada = null; // Limpiar imagen seleccionada
+                      });
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Perfil actualizado correctamente')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al actualizar perfil: $e')),
+                      );
+                    }
+                  },
+                  child: _subiendoImagen 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Guardar'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final nuevosDatos = {
-                  'nombre': controladorNombre.text.trim(),
-                  'correo': controladorCorreo.text.trim(),
-                  'biografia': controladorBiografia.text.trim(),
-                };
-                try {
-                  await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, nuevosDatos);
-                  await _cargarDatosUsuario(); // Recargar datos
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Perfil actualizado correctamente')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al actualizar perfil: $e')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -156,45 +246,49 @@ class _PerfilState extends State<Perfil> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Seleccionar Idioma'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('Español'),
-                value: 'es',
-                groupValue: idiomaSeleccionado,
-                onChanged: (value) {
-                  setState(() => idiomaSeleccionado = value!);
-                },
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Seleccionar Idioma'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('Español'),
+                    value: 'es',
+                    groupValue: idiomaSeleccionado,
+                    onChanged: (value) {
+                      setStateDialog(() => idiomaSeleccionado = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('English'),
+                    value: 'en',
+                    groupValue: idiomaSeleccionado,
+                    onChanged: (value) {
+                      setStateDialog(() => idiomaSeleccionado = value!);
+                    },
+                  ),
+                ],
               ),
-              RadioListTile<String>(
-                title: const Text('English'),
-                value: 'en',
-                groupValue: idiomaSeleccionado,
-                onChanged: (value) {
-                  setState(() => idiomaSeleccionado = value!);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Aquí iría la lógica para cambiar el idioma
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Idioma cambiado a ${idiomaSeleccionado == 'es' ? 'Español' : 'English'}')),
-                );
-                Navigator.of(context).pop();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Aquí iría la lógica para cambiar el idioma
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Idioma cambiado a ${idiomaSeleccionado == 'es' ? 'Español' : 'English'}')),
+                    );
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -206,51 +300,55 @@ class _PerfilState extends State<Perfil> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Seleccionar Tema'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('Claro'),
-                value: 'claro',
-                groupValue: temaSeleccionado,
-                onChanged: (value) {
-                  setState(() => temaSeleccionado = value!);
-                },
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Seleccionar Tema'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('Claro'),
+                    value: 'claro',
+                    groupValue: temaSeleccionado,
+                    onChanged: (value) {
+                      setStateDialog(() => temaSeleccionado = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Oscuro'),
+                    value: 'oscuro',
+                    groupValue: temaSeleccionado,
+                    onChanged: (value) {
+                      setStateDialog(() => temaSeleccionado = value!);
+                    },
+                  ),
+                ],
               ),
-              RadioListTile<String>(
-                title: const Text('Oscuro'),
-                value: 'oscuro',
-                groupValue: temaSeleccionado,
-                onChanged: (value) {
-                  setState(() => temaSeleccionado = value!);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Aquí iría la lógica para cambiar el tema
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Tema cambiado a ${temaSeleccionado == 'claro' ? 'Claro' : 'Oscuro'}')),
-                );
-                Navigator.of(context).pop();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Aquí iría la lógica para cambiar el tema
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Tema cambiado a ${temaSeleccionado == 'claro' ? 'Claro' : 'Oscuro'}')),
+                    );
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  void _sincronizarDatos() async {
+  Future<void> _sincronizarDatos() async {
     // Simular sincronización
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Sincronizando datos...')),
@@ -280,6 +378,81 @@ class _PerfilState extends State<Perfil> {
         );
       },
     );
+  }
+
+  Future<void> _cerrarSesion() async {
+    try {
+      await _auth.signOut();
+      Navigator.pushReplacementNamed(context, '/');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cerrar sesión: $e')),
+      );
+    }
+  }
+
+  Future<void> _seleccionarImagen() async {
+    final ImagePicker picker = ImagePicker();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleccionar imagen'),
+          content: const Text('¿De dónde quieres seleccionar la imagen?'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
+                if (imagen != null) {
+                  setState(() {
+                    _imagenSeleccionada = File(imagen.path);
+                  });
+                }
+              },
+              child: const Text('Galería'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final XFile? imagen = await picker.pickImage(source: ImageSource.camera);
+                if (imagen != null) {
+                  setState(() {
+                    _imagenSeleccionada = File(imagen.path);
+                  });
+                }
+              },
+              child: const Text('Cámara'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<String?> _subirImagenAFirebase(File imagen) async {
+    try {
+      setState(() => _subiendoImagen = true);
+      
+      final String nombreArchivo = '${_auth.currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference ref = FirebaseStorage.instance.ref().child('imagenes_perfil/$nombreArchivo');
+      
+      final UploadTask uploadTask = ref.putFile(imagen);
+      final TaskSnapshot snapshot = await uploadTask;
+      final String urlDescarga = await snapshot.ref.getDownloadURL();
+      
+      setState(() => _subiendoImagen = false);
+      return urlDescarga;
+    } catch (e) {
+      setState(() => _subiendoImagen = false);
+      print('Error al subir imagen: $e');
+      return null;
+    }
   }
   
   Widget _construirEncabezadoPerfil() {
@@ -324,7 +497,19 @@ class _PerfilState extends State<Perfil> {
                   color: AppColores.primario.withOpacity(0.1),
                   border: Border.all(color: AppColores.primario, width: 2),
                 ),
-                child: const Icon(Icons.person, size: 40, color: AppColores.primario),
+                child: _datosUsuario?.urlImagenPerfil != null && _datosUsuario!.urlImagenPerfil!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        _datosUsuario!.urlImagenPerfil!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.person,
+                          size: 40,
+                          color: AppColores.primario,
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.person, size: 40, color: AppColores.primario),
               ),
               const SizedBox(width: 20),
               Expanded(
@@ -382,6 +567,7 @@ class _PerfilState extends State<Perfil> {
       _construirSeccionInformacion(),
       _construirSeccionProgreso(),
       _construirSeccionEstadisticas(),
+      _construirSeccionPreferencias(),
       _construirSeccionConfiguracion(),
     ];
     return secciones[_seccionSeleccionada];
@@ -444,7 +630,7 @@ class _PerfilState extends State<Perfil> {
           const SizedBox(height: 12),
           ...contenido,
         ],
-      ),
+      )
     );
   }
 
@@ -682,6 +868,374 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
+  Widget _construirSeccionPreferencias() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: EstilosApp.tarjeta,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Preferencias de Lectura', style: EstilosApp.tituloMedio),
+          const SizedBox(height: 20),
+          
+          // Formatos preferidos
+          _construirTarjetaInfo(
+            'Formatos Preferidos',
+            [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _construirChipFormato('Físico', Icons.book, _datosUsuario?.preferencias['formatos']?.contains('fisico') ?? false),
+                  _construirChipFormato('Digital', Icons.tablet, _datosUsuario?.preferencias['formatos']?.contains('digital') ?? false),
+                  _construirChipFormato('Audiolibro', Icons.headphones, _datosUsuario?.preferencias['formatos']?.contains('audio') ?? false),
+                ],
+              ),
+            ],
+            Icons.format_list_bulleted,
+          ),
+          const SizedBox(height: 20),
+          
+          // Géneros favoritos
+          _construirTarjetaInfo(
+            'Géneros Favoritos',
+            [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _construirChipGenero('Ficción', _datosUsuario?.generosFavoritos?.contains('ficcion') ?? false),
+                  _construirChipGenero('No Ficción', _datosUsuario?.generosFavoritos?.contains('no_ficcion') ?? false),
+                  _construirChipGenero('Ciencia Ficción', _datosUsuario?.generosFavoritos?.contains('ciencia_ficcion') ?? false),
+                  _construirChipGenero('Fantasía', _datosUsuario?.generosFavoritos?.contains('fantasia') ?? false),
+                  _construirChipGenero('Romance', _datosUsuario?.generosFavoritos?.contains('romance') ?? false),
+                  _construirChipGenero('Misterio', _datosUsuario?.generosFavoritos?.contains('misterio') ?? false),
+                  _construirChipGenero('Biografía', _datosUsuario?.generosFavoritos?.contains('biografia') ?? false),
+                  _construirChipGenero('Historia', _datosUsuario?.generosFavoritos?.contains('historia') ?? false),
+                ],
+              ),
+            ],
+            Icons.category,
+          ),
+          const SizedBox(height: 20),
+          
+          // Objetivos de lectura
+          _construirTarjetaInfo(
+            'Objetivos de Lectura',
+            [
+              ElementoConfiguracion(
+                titulo: 'Libros por mes',
+                subtitulo: 'Establece tu meta mensual',
+                icono: Icons.flag,
+                alPresionar: _mostrarDialogoObjetivos,
+              ),
+              ElementoConfiguracion(
+                titulo: 'Recordatorios diarios',
+                subtitulo: 'Recuérdame leer todos los días',
+                icono: Icons.schedule,
+                tieneSwitch: true,
+                valorSwitch: _datosUsuario?.preferencias['recordatorios'] ?? false,
+                alCambiarSwitch: _cambiarRecordatorios,
+              ),
+            ],
+            Icons.track_changes,
+          ),
+          const SizedBox(height: 20),
+          
+          // Horarios de lectura
+          _construirTarjetaInfo(
+            'Horarios Preferidos',
+            [
+              ElementoConfiguracion(
+                titulo: 'Horario de lectura',
+                subtitulo: 'Establece tus horarios favoritos',
+                icono: Icons.access_time,
+                alPresionar: _mostrarDialogoHorarios,
+              ),
+            ],
+            Icons.schedule,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirChipFormato(String formato, IconData icono, bool seleccionado) {
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 16),
+          const SizedBox(width: 4),
+          Text(formato),
+        ],
+      ),
+      selected: seleccionado,
+      onSelected: (bool value) => _cambiarFormatoPreferido(formato.toLowerCase(), value),
+      backgroundColor: Colors.grey.shade100,
+      selectedColor: AppColores.primario.withOpacity(0.2),
+      checkmarkColor: AppColores.primario,
+    );
+  }
+
+  Widget _construirChipGenero(String genero, bool seleccionado) {
+    return FilterChip(
+      label: Text(genero),
+      selected: seleccionado,
+      onSelected: (bool value) => _cambiarGeneroFavorito(genero.toLowerCase().replaceAll(' ', '_'), value),
+      backgroundColor: Colors.grey.shade100,
+      selectedColor: AppColores.primario.withOpacity(0.2),
+      checkmarkColor: AppColores.primario,
+    );
+  }
+
+  void _cambiarFormatoPreferido(String formato, bool agregar) async {
+    try {
+      List<String> formatosActuales = List<String>.from(_datosUsuario?.preferencias['formatos'] ?? []);
+      
+      if (agregar) {
+        if (!formatosActuales.contains(formato)) {
+          formatosActuales.add(formato);
+        }
+      } else {
+        formatosActuales.remove(formato);
+      }
+      
+      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+        'preferencias': {
+          ...?_datosUsuario?.preferencias,
+          'formatos': formatosActuales,
+        }
+      });
+      
+      await _cargarDatosUsuario();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al actualizar formatos preferidos')),
+      );
+    }
+  }
+
+  void _cambiarGeneroFavorito(String genero, bool agregar) async {
+    try {
+      List<String> generosActuales = List<String>.from(_datosUsuario?.generosFavoritos ?? []);
+      
+      if (agregar) {
+        if (!generosActuales.contains(genero)) {
+          generosActuales.add(genero);
+        }
+      } else {
+        generosActuales.remove(genero);
+      }
+      
+      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+        'generosFavoritos': generosActuales,
+      });
+      
+      await _cargarDatosUsuario();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al actualizar géneros favoritos')),
+      );
+    }
+  }
+
+  void _cambiarRecordatorios(bool valor) async {
+    try {
+      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+        'preferencias': {
+          ...?_datosUsuario?.preferencias,
+          'recordatorios': valor,
+        }
+      });
+      await _cargarDatosUsuario();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recordatorios ${valor ? 'activados' : 'desactivados'}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al cambiar recordatorios')),
+      );
+    }
+  }
+
+  void _mostrarDialogoObjetivos() {
+    int librosPorMes = _datosUsuario?.preferencias['libros_por_mes'] ?? 1;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Establecer Objetivos'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('¿Cuántos libros quieres leer por mes?'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (librosPorMes > 1) {
+                            librosPorMes--;
+                            setStateDialog(() {});
+                          }
+                        },
+                        icon: const Icon(Icons.remove),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          librosPorMes.toString(),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          if (librosPorMes < 50) {
+                            librosPorMes++;
+                            setStateDialog(() {});
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+                        'preferencias': {
+                          ...?_datosUsuario?.preferencias,
+                          'libros_por_mes': librosPorMes,
+                        }
+                      });
+                      await _cargarDatosUsuario();
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Objetivo establecido: $librosPorMes libros por mes')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Error al guardar objetivo')),
+                      );
+                    }
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _mostrarDialogoHorarios() {
+    TimeOfDay horaInicio = _datosUsuario?.preferencias['hora_inicio'] != null 
+      ? TimeOfDay(
+          hour: _datosUsuario!.preferencias['hora_inicio']['hora'] ?? 9,
+          minute: _datosUsuario!.preferencias['hora_inicio']['minuto'] ?? 0,
+        )
+      : const TimeOfDay(hour: 9, minute: 0);
+    
+    TimeOfDay horaFin = _datosUsuario?.preferencias['hora_fin'] != null
+      ? TimeOfDay(
+          hour: _datosUsuario!.preferencias['hora_fin']['hora'] ?? 22,
+          minute: _datosUsuario!.preferencias['hora_fin']['minuto'] ?? 0,
+        )
+      : const TimeOfDay(hour: 22, minute: 0);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Horarios de Lectura'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: const Text('Hora de inicio'),
+                    subtitle: Text(horaInicio.format(context)),
+                    onTap: () async {
+                      final TimeOfDay? picked = await showTimePicker(
+                        context: context,
+                        initialTime: horaInicio,
+                      );
+                      if (picked != null) {
+                        horaInicio = picked;
+                        setStateDialog(() {});
+                      }
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Hora de fin'),
+                    subtitle: Text(horaFin.format(context)),
+                    onTap: () async {
+                      final TimeOfDay? picked = await showTimePicker(
+                        context: context,
+                        initialTime: horaFin,
+                      );
+                      if (picked != null) {
+                        horaFin = picked;
+                        setStateDialog(() {});
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await _servicioFirestore.actualizarDatosUsuario(_auth.currentUser!.uid, {
+                        'preferencias': {
+                          ...?_datosUsuario?.preferencias,
+                          'hora_inicio': {'hora': horaInicio.hour, 'minuto': horaInicio.minute},
+                          'hora_fin': {'hora': horaFin.hour, 'minuto': horaFin.minute},
+                        }
+                      });
+                      await _cargarDatosUsuario();
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Horarios guardados correctamente')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Error al guardar horarios')),
+                      );
+                    }
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _construirSeccionConfiguracion() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -748,7 +1302,7 @@ class _PerfilState extends State<Perfil> {
                     width: double.infinity,
                     height: 50,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: _cerrarSesion,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
