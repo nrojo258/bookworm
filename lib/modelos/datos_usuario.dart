@@ -10,6 +10,8 @@ class DatosUsuario {
   final Map<String, dynamic> preferencias;
   final Map<String, dynamic> estadisticas;
   final List<String> generosFavoritos;
+  final String biografia;
+  final String? urlImagenPerfil;
 
   DatosUsuario({
     required this.uid,
@@ -21,6 +23,8 @@ class DatosUsuario {
     required this.preferencias,
     required this.estadisticas,
     required this.generosFavoritos,
+    this.biografia = '',
+    this.urlImagenPerfil,
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +38,8 @@ class DatosUsuario {
       'preferencias': preferencias,
       'estadisticas': estadisticas,
       'generosFavoritos': generosFavoritos,
+      'biografia': biografia,
+      'urlImagenPerfil': urlImagenPerfil,
     };
   }
 
@@ -50,6 +56,8 @@ class DatosUsuario {
       preferencias: Map<String, dynamic>.from(map['preferencias'] ?? {}),
       estadisticas: Map<String, dynamic>.from(map['estadisticas'] ?? {}),
       generosFavoritos: List<String>.from(map['generosFavoritos'] ?? []),
+      biografia: map['biografia'] ?? '',
+      urlImagenPerfil: map['urlImagenPerfil'],
     );
   }
 
@@ -71,6 +79,8 @@ class DatosUsuario {
         'paginasTotales': 0,
       },
       generosFavoritos: [],
+      biografia: '',
+      urlImagenPerfil: null,
     );
   }
 }

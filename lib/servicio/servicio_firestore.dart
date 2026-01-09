@@ -48,6 +48,19 @@ class ServicioFirestore {
     }
   }
 
+  Future<void> actualizarDatosUsuario(String uid, Map<String, dynamic> nuevosDatos) async {
+    try {
+      await _firestore
+          .collection('usuarios')
+          .doc(uid)
+          .update(nuevosDatos);
+      print('Datos del usuario actualizados');
+    } catch (e) {
+      print('Error al actualizar datos del usuario: $e');
+      throw Exception('Error al actualizar datos del usuario: $e');
+    }
+  }
+
   Future<void> guardarProgresoLectura(ProgresoLectura progreso) async {
     try {
       await _firestore

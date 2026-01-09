@@ -36,8 +36,12 @@ class _BuscarState extends State<Buscar> {
   }
 
   Future<void> _realizarBusqueda() async {
-    if (_controladorBusqueda.text.isEmpty) {
-      _mostrarError('Por favor ingresa un término de búsqueda');
+    // Permitir búsqueda sin texto si hay filtros seleccionados
+    bool tieneFiltros = (_generoSeleccionado != null && _generoSeleccionado != 'Todos los géneros') || 
+                       (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos');
+    
+    if (_controladorBusqueda.text.isEmpty && !tieneFiltros) {
+      _mostrarError('Por favor ingresa un término de búsqueda o selecciona un filtro');
       return;
     }
     
@@ -48,12 +52,33 @@ class _BuscarState extends State<Buscar> {
 
     try {
       List<Libro> resultados;
+      String consultaBusqueda = _controladorBusqueda.text;
+      
+      // Si no hay texto pero hay género, usar el género como consulta
+      if (consultaBusqueda.isEmpty && _generoSeleccionado != null && _generoSeleccionado != 'Todos los géneros') {
+        consultaBusqueda = _generoSeleccionado!;
+      }
+      
+      // Si no hay texto ni género específico, hacer una búsqueda general
+      if (consultaBusqueda.isEmpty) {
+        consultaBusqueda = 'fiction'; // Búsqueda general por defecto
+      }
       
       resultados = await _servicioOpenLibrary.buscarLibros(
-        consulta: _controladorBusqueda.text,
+        consulta: consultaBusqueda,
         genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
         limite: 20,
       );
+      
+      // Filtrar por formato si es necesario
+      if (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos') {
+        if (_formatoSeleccionado == 'Audiolibros') {
+          // Por ahora, mostrar mensaje de que no hay audiolibros disponibles
+          _mostrarError('Los audiolibros estarán disponibles próximamente');
+          resultados = [];
+        }
+        // Si es "Libros", mostrar todos los resultados (son libros físicos)
+      }
       
       setState(() {
         _resultadosBusqueda = resultados;
@@ -89,7 +114,7 @@ class _BuscarState extends State<Buscar> {
       return const EstadoVacio(
         icono: Icons.search,
         titulo: 'Busca tu próximo libro favorito',
-        descripcion: 'Ingresa un título, autor o género',
+        descripcion: 'Ingresa un título, autor, o selecciona un género/formato',
       );
     }
 
@@ -160,7 +185,7 @@ class _BuscarState extends State<Buscar> {
                   
                   BarraBusquedaPersonalizada(
                     controlador: _controladorBusqueda,
-                    textoHint: 'Ej: Harry Potter, Stephen King, Ciencia Ficción...',
+                    textoHint: 'Ej: Harry Potter, Stephen King, o deja vacío para buscar por filtros',
                     alBuscar: _realizarBusqueda,
                   ),
                   const SizedBox(height: 20),

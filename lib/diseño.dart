@@ -18,7 +18,7 @@ class EstilosApp {
   static const TextStyle tituloGrande = TextStyle(
     fontSize: 32,
     fontWeight: FontWeight.bold,
-    color: AppColores.texto,
+    color: Colors.white,
     letterSpacing: -0.5,
   );
 
@@ -230,6 +230,7 @@ class DatosApp {
     {'texto': 'Información', 'icono': Icons.person},
     {'texto': 'Progreso', 'icono': Icons.trending_up},
     {'texto': 'Estadísticas', 'icono': Icons.bar_chart},
+    {'texto': 'Preferencias', 'icono': Icons.tune},
     {'texto': 'Configuración', 'icono': Icons.settings},
   ];
 }
