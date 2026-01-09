@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'diseño.dart';
 import 'componentes.dart';
@@ -25,6 +25,9 @@ class _PerfilState extends State<Perfil> {
   // Imagen seleccionada para subir
   File? _imagenSeleccionada;
   bool _subiendoImagen = false;
+
+  // Referencia a FirebaseStorage
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   @override
   void initState() {
@@ -78,7 +81,12 @@ class _PerfilState extends State<Perfil> {
 
     if (source == null) return;
 
-    final XFile? pickedFile = await picker.pickImage(source: source);
+    final XFile? pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
     if (pickedFile != null && mounted) {
       setState(() {
         _imagenSeleccionada = File(pickedFile.path);
@@ -90,20 +98,60 @@ class _PerfilState extends State<Perfil> {
     try {
       setState(() => _subiendoImagen = true);
 
+      final usuario = _auth.currentUser;
+      if (usuario == null) {
+        print('Usuario no autenticado');
+        return null;
+      }
+
+      // Generar nombre único para el archivo
       final nombreArchivo =
-          '${_auth.currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final ref = FirebaseStorage.instance.ref().child('imagenes_perfil/$nombreArchivo');
+          '${usuario.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      // Crear referencia al archivo en Firebase Storage
+      final Reference ref = _storage.ref().child('imagenes_perfil/$nombreArchivo');
+      
+      // Subir el archivo
+      final UploadTask uploadTask = ref.putFile(
+        imagen,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'subidoPor': usuario.email ?? usuario.uid,
+            'fechaSubida': DateTime.now().toString(),
+          },
+        ),
+      );
 
-      final uploadTask = ref.putFile(imagen);
-      final snapshot = await uploadTask;
-      final url = await snapshot.ref.getDownloadURL();
+      // Monitorear progreso de subida
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes * 100;
+        print('Progreso de subida: $progress%');
+      });
 
+      // Esperar a que se complete la subida
+      final TaskSnapshot snapshot = await uploadTask;
+      
+      // Obtener la URL de descarga
+      final String url = await snapshot.ref.getDownloadURL();
+      
+      print('Imagen subida exitosamente. URL: $url');
       return url;
+      
     } catch (e) {
       print('Error subiendo imagen: $e');
+      
+      // Manejar errores específicos
+      if (e is FirebaseException) {
+        print('Código de error: ${e.code}');
+        print('Mensaje: ${e.message}');
+      }
+      
       return null;
     } finally {
-      if (mounted) setState(() => _subiendoImagen = false);
+      if (mounted) {
+        setState(() => _subiendoImagen = false);
+      }
     }
   }
 
@@ -136,7 +184,7 @@ class _PerfilState extends State<Perfil> {
                                 : (_datosUsuario?.urlImagenPerfil != null &&
                                         _datosUsuario!.urlImagenPerfil!.isNotEmpty
                                     ? NetworkImage(_datosUsuario!.urlImagenPerfil!)
-                                    : null),
+                                    : null) as ImageProvider?,
                             child: imagenTemp == null &&
                                     (_datosUsuario?.urlImagenPerfil == null ||
                                         _datosUsuario!.urlImagenPerfil!.isEmpty)
@@ -172,12 +220,18 @@ class _PerfilState extends State<Perfil> {
                     const SizedBox(height: 20),
                     TextField(
                       controller: nombreCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre completo'),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre completo',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: biografiaCtrl,
-                      decoration: const InputDecoration(labelText: 'Biografía'),
+                      decoration: const InputDecoration(
+                        labelText: 'Biografía',
+                        border: OutlineInputBorder(),
+                      ),
                       maxLines: 3,
                     ),
                   ],
@@ -185,7 +239,10 @@ class _PerfilState extends State<Perfil> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    setState(() => _imagenSeleccionada = null);
+                    Navigator.pop(context);
+                  },
                   child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
@@ -194,42 +251,67 @@ class _PerfilState extends State<Perfil> {
                       : () async {
                           String? nuevaUrl = _datosUsuario?.urlImagenPerfil;
 
+                          // Subir nueva imagen si se seleccionó una
                           if (imagenTemp != null) {
                             nuevaUrl = await _subirImagenAFirebase(imagenTemp!);
                             if (nuevaUrl == null && mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Error al subir la imagen')),
+                                const SnackBar(
+                                  content: Text('Error al subir la imagen'),
+                                  backgroundColor: Colors.red,
+                                ),
                               );
                               return;
                             }
                           }
 
                           try {
+                            // Preparar datos a actualizar
+                            final Map<String, dynamic> datosActualizados = {
+                              'nombre': nombreCtrl.text.trim(),
+                              'biografia': biografiaCtrl.text.trim(),
+                              'ultimaActualizacion': DateTime.now().toIso8601String(),
+                            };
+
+                            // Agregar URL de imagen si hay una nueva
+                            if (nuevaUrl != null) {
+                              datosActualizados['urlImagenPerfil'] = nuevaUrl;
+                            }
+
+                            // Actualizar en Firestore
                             await _servicioFirestore.actualizarDatosUsuario(
                               _auth.currentUser!.uid,
-                              {
-                                'nombre': nombreCtrl.text.trim(),
-                                'biografia': biografiaCtrl.text.trim(),
-                                if (nuevaUrl != null) 'urlImagenPerfil': nuevaUrl,
-                              },
+                              datosActualizados,
                             );
 
+                            // Recargar datos
                             await _cargarDatosUsuario();
+                            
                             if (mounted) {
                               setState(() => _imagenSeleccionada = null);
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Perfil actualizado correctamente')),
+                                const SnackBar(
+                                  content: Text('Perfil actualizado correctamente'),
+                                  backgroundColor: Colors.green,
+                                ),
                               );
                             }
                           } catch (e) {
+                            print('Error al actualizar perfil: $e');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error al actualizar: $e')),
+                                SnackBar(
+                                  content: Text('Error al actualizar: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
                               );
                             }
                           }
                         },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColores.primario,
+                  ),
                   child: _subiendoImagen
                       ? const SizedBox(
                           width: 20,
@@ -246,6 +328,7 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
+  // Resto del código se mantiene igual...
   Future<void> _cerrarSesion() async {
     await _auth.signOut();
     if (mounted) {

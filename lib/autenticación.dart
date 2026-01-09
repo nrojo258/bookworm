@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:io';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
 import '../modelos/datos_usuario.dart'; 
@@ -422,103 +420,5 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         ),
       ),
     );
-  }
-
-  List<Widget> _construirPieAuth() {
-    return [
-      const SizedBox(height: 25),
-      
-      // Separador
-      Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: Text(
-              'O continúa con',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-        ],
-      ),
-      
-      const SizedBox(height: 25),
-      
-      // Botón de Google
-      SizedBox(
-        width: double.infinity,
-        height: 55,
-        child: OutlinedButton.icon(
-          onPressed: _estaCargando ? null : _iniciarSesionConGoogle,
-          icon: Image.asset(
-            'assets/google_logo.png', // Asegúrate de tener este archivo en assets/
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => 
-                const Icon(Icons.g_mobiledata, color: Colors.red),
-          ),
-          label: const Text(
-            'Continuar con Google',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.grey[300]!),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            elevation: 1,
-          ),
-        ),
-      ),
-      
-      const SizedBox(height: 25),
-      
-      // Enlace para alternar entre login/registro
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            _esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _estaCargando ? null : _alternarModoAuth,
-            child: Text(
-              _esLogin ? 'Regístrate aquí' : 'Inicia sesión aquí',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColores.primario,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ],
-      ),
-      
-      const SizedBox(height: 10),
-    ];
   }
 }
