@@ -5,26 +5,22 @@ class DatosUsuario {
   final String nombre;
   final String correo;
   final DateTime fechaCreacion;
-  final String? urlImagenPerfil;  
-  final String? biografia; 
+  final String? urlImagenPerfil;
+  final String? biografia;
   final Map<String, dynamic> preferencias;
   final Map<String, dynamic> estadisticas;
   final List<String> generosFavoritos;
-  final String biografia;
-  final String? urlImagenPerfil;
 
   DatosUsuario({
     required this.uid,
     required this.nombre,
     required this.correo,
     required this.fechaCreacion,
-    this.urlImagenPerfil,         
-    this.biografia,
+    this.urlImagenPerfil,
+    this.biografia = '', // Valor por defecto opcional
     required this.preferencias,
     required this.estadisticas,
     required this.generosFavoritos,
-    this.biografia = '',
-    this.urlImagenPerfil,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,13 +29,11 @@ class DatosUsuario {
       'nombre': nombre,
       'correo': correo,
       'fechaCreacion': Timestamp.fromDate(fechaCreacion),
-      'urlImagenPerfil': urlImagenPerfil,  
-      'biografia': biografia,   
+      'urlImagenPerfil': urlImagenPerfil,
+      'biografia': biografia,
       'preferencias': preferencias,
       'estadisticas': estadisticas,
       'generosFavoritos': generosFavoritos,
-      'biografia': biografia,
-      'urlImagenPerfil': urlImagenPerfil,
     };
   }
 
@@ -48,19 +42,18 @@ class DatosUsuario {
       uid: map['uid'] ?? '',
       nombre: map['nombre'] ?? '',
       correo: map['correo'] ?? '',
-      fechaCreacion: map['fechaCreacion'] != null 
+      fechaCreacion: map['fechaCreacion'] != null
           ? (map['fechaCreacion'] as Timestamp).toDate()
           : DateTime.now(),
-      urlImagenPerfil: map['urlImagenPerfil'],  
-      biografia: map['biografia'],            
+      urlImagenPerfil: map['urlImagenPerfil'],
+      biografia: map['biografia'] ?? '',
       preferencias: Map<String, dynamic>.from(map['preferencias'] ?? {}),
       estadisticas: Map<String, dynamic>.from(map['estadisticas'] ?? {}),
       generosFavoritos: List<String>.from(map['generosFavoritos'] ?? []),
-      biografia: map['biografia'] ?? '',
-      urlImagenPerfil: map['urlImagenPerfil'],
     );
   }
 
+  /// Constructor para crear un usuario vacío (útil para placeholders o inicialización)
   factory DatosUsuario.vacio() {
     return DatosUsuario(
       uid: '',
@@ -71,6 +64,10 @@ class DatosUsuario {
         'generos': [],
         'formatos': ['fisico', 'audio'],
         'notificaciones': true,
+        'recordatorios': false,
+        'libros_por_mes': 1,
+        'hora_inicio': {'hora': 9, 'minuto': 0},
+        'hora_fin': {'hora': 22, 'minuto': 0},
       },
       estadisticas: {
         'librosLeidos': 0,
