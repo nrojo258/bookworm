@@ -13,7 +13,16 @@ import 'sincronizacion_offline.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("Firebase inicializado correctamente");
+  } catch (e) {
+    print("Error inicializando Firebase: $e");
+  }
+  
   runApp(const AppBookWorm());
 }
 

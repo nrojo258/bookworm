@@ -83,62 +83,67 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
   }
 
   Widget _construirGraficoBarras() {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.all(20),
-      decoration: EstilosApp.tarjetaPlana,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: 12,
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              tooltipBgColor: AppColores.primario,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  '${rod.toY.toInt()} libros',
-                  const TextStyle(color: Colors.white),
+  return Container(
+    height: 300,
+    padding: const EdgeInsets.all(20),
+    decoration: EstilosApp.tarjetaPlana,
+    child: BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: 12,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            tooltipBorderRadius: BorderRadius.circular(8),  
+            getTooltipColor: (_) => AppColores.primario,    
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              return BarTooltipItem(
+                '${rod.toY.toInt()} libros',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    meses[value.toInt()],
+                    style: EstilosApp.cuerpoPequeno,
+                  ),
                 );
               },
             ),
           ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  final meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      meses[value.toInt()],
-                      style: EstilosApp.cuerpoPequeno,
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: EstilosApp.cuerpoPequeno,
-                  );
-                },
-              ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: EstilosApp.cuerpoPequeno,
+                );
+              },
             ),
           ),
-          gridData: FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-          barGroups: _construirDatosBarrasLibros(),
         ),
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        barGroups: _construirDatosBarrasLibros(),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _construirGraficoTorta() {
     return Container(

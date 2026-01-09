@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:io';
 import 'diseño.dart';
 import '../servicio/servicio_firestore.dart'; 
 import '../modelos/datos_usuario.dart'; 
@@ -27,7 +25,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   bool _estaCargando = false;
   
   final _auth = FirebaseAuth.instance;
-  final GoogleSignIn? _googleSignIn = !kIsWeb && (Platform.isAndroid || Platform.isIOS) ? GoogleSignIn.standard() : null;
   
   @override
   void dispose() {
@@ -63,21 +60,18 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
   }
 
   bool _validarFormulario() {
-    // Validar email
     final email = _controladorEmail.text.trim();
     if (email.isEmpty) {
       _mostrarSnackBar('Ingresa tu correo electrónico', Colors.red);
       return false;
     }
     
-    // Validar formato de email
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     if (!emailRegex.hasMatch(email)) {
       _mostrarSnackBar('Ingresa un correo electrónico válido', Colors.red);
       return false;
     }
     
-    // Validar contraseña
     if (_controladorPassword.text.isEmpty) {
       _mostrarSnackBar('Ingresa tu contraseña', Colors.red);
       return false;
@@ -88,7 +82,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
       return false;
     }
     
-    // Validaciones para registro
     if (!_esLogin) {
       if (_controladorNombre.text.trim().isEmpty) {
         _mostrarSnackBar('Ingresa tu nombre', Colors.red);
@@ -127,10 +120,16 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         nombre: _controladorNombre.text.trim(),
         correo: _controladorEmail.text.trim(),
         fechaCreacion: DateTime.now(),
+        urlImagenPerfil: null,
+        biografia: '',
         preferencias: {
           'generos': [],
           'formatos': ['fisico', 'audio'],
           'notificaciones': true,
+          'recordatorios': false,
+          'libros_por_mes': 1,
+          'hora_inicio': {'hora': 9, 'minuto': 0},
+          'hora_fin': {'hora': 22, 'minuto': 0},
         },
         estadisticas: {
           'librosLeidos': 0,
@@ -147,169 +146,11 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         _mostrarSnackBar('¡Cuenta creada exitosamente!', Colors.green);
         _navegarAInicio();
       } catch (e) {
-        // Si falla Firestore, eliminar el usuario de Auth para consistencia
         await credencialUsuario.user!.delete();
         _mostrarSnackBar('Error al guardar datos: $e', Colors.red);
         rethrow;
       }
     }
-  } 
-
-  Future<void> _iniciarSesionConGoogle() async {
-    setState(() => _estaCargando = true);
-    
-    try {
-      UserCredential userCredential;
-      
-      if (kIsWeb) {
-        // --- Para Web ---
-        // Usar GoogleAuthProvider directamente
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        
-        // Configuraciones opcionales para personalizar la experiencia
-        googleProvider.addScope('email');
-        googleProvider.addScope('profile');
-        
-        // Opción 1: Usar signInWithPopup (recomendado para desarrollo)
-        userCredential = await _auth.signInWithPopup(googleProvider);
-        
-        // Opción 2: Para producción, puedes considerar signInWithRedirect
-        // userCredential = await _auth.signInWithRedirect(googleProvider);
-        
-      } else {
-        // --- Para Móvil (Android/iOS) ---
-        if (_googleSignIn == null) {
-          throw PlatformException(
-            code: 'UNSUPPORTED_PLATFORM',
-            message: 'Google Sign-In no está disponible en esta plataforma'
-          );
-        }
-        
-        // Iniciar el flujo de Google Sign-In
-        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          // Usuario canceló el inicio de sesión
-          setState(() => _estaCargando = false);
-          return;
-        }
-        
-        // Obtener tokens de autenticación
-        final GoogleSignInAuthentication googleAuth = 
-            await googleUser.authentication;
-            
-        // Crear credencial de Firebase con los tokens
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        
-        // Iniciar sesión en Firebase con la credencial
-        userCredential = await _auth.signInWithCredential(credential);
-      }
-      
-      // Procesar el usuario después del inicio de sesión exitoso
-      final User? user = userCredential.user;
-      
-      if (user != null) {
-        // Verificar si es un usuario nuevo
-        final servicioFirestore = ServicioFirestore();
-        final datosUsuarioExistente = 
-            await servicioFirestore.obtenerDatosUsuario(user.uid);
-        
-        if (datosUsuarioExistente == null) {
-          // Usuario nuevo, crear documento en Firestore
-          final datosUsuario = DatosUsuario(
-            uid: user.uid,
-            nombre: user.displayName ?? _extraerNombreDeEmail(user.email ?? 'Usuario'),
-            correo: user.email ?? '',
-            fechaCreacion: DateTime.now(),
-            preferencias: {
-              'generos': [],
-              'formatos': ['fisico', 'audio'],
-              'notificaciones': true,
-            },
-            estadisticas: {
-              'librosLeidos': 0,
-              'tiempoLectura': 0,
-              'rachaActual': 0,
-              'paginasTotales': 0,
-            },
-            generosFavoritos: [],
-          );
-          
-          await servicioFirestore.crearUsuario(datosUsuario);
-          _mostrarSnackBar('¡Bienvenido! Tu cuenta ha sido creada.', Colors.green);
-        } else {
-          _mostrarSnackBar('¡Bienvenido de vuelta!', Colors.green);
-        }
-        
-        _navegarAInicio();
-      }
-      
-    } on FirebaseAuthException catch (e) {
-      // Manejo específico de errores de Firebase
-      if (e.code == 'account-exists-with-different-credential') {
-        // El correo ya existe con otro proveedor de autenticación
-        _mostrarSnackBar(
-          'Esta cuenta ya existe con otro método de inicio de sesión. '
-          'Por favor, inicia sesión con el método original.',
-          Colors.orange
-        );
-        
-        // Puedes implementar un flujo de vinculación aquí si lo necesitas
-        // await _vincularCuentaConGoogle(e.email!);
-        
-      } else if (e.code == 'popup-blocked') {
-        _mostrarSnackBar(
-          'El navegador bloqueó la ventana emergente. '
-          'Por favor, permite ventanas emergentes para este sitio.',
-          Colors.orange
-        );
-        
-      } else if (e.code == 'popup-closed-by-user') {
-        // El usuario cerró la ventana, no es un error
-        // Solo resetear el estado de carga
-        
-      } else if (e.code == 'unauthorized-domain') {
-        _mostrarSnackBar(
-          'Este dominio no está autorizado para Google Sign-In. '
-          'Por favor, contacta al administrador.',
-          Colors.red
-        );
-        
-      } else {
-        _manejarErrorFirebase(e);
-      }
-      
-    } on PlatformException catch (e) {
-      // Para errores de plataforma
-      if (e.code != 'sign_in_canceled' && e.code != 'ERROR_SIGN_IN_CANCELLED') {
-        _mostrarSnackBar('Error de plataforma: ${e.message}', Colors.red);
-      }
-      
-    } catch (e) {
-      _mostrarSnackBar('Error inesperado al iniciar sesión con Google: $e', Colors.red);
-      print('Error detallado: $e');
-      
-    } finally {
-      if (mounted) {
-        setState(() => _estaCargando = false);
-      }
-    }
-  }
-  
-  String _extraerNombreDeEmail(String email) {
-    // Extraer la parte antes del @ como nombre por defecto
-    final parts = email.split('@');
-    if (parts.isNotEmpty) {
-      return parts[0].replaceAll('.', ' ').split(' ').map((word) {
-        if (word.isNotEmpty) {
-          return word[0].toUpperCase() + word.substring(1).toLowerCase();
-        }
-        return '';
-      }).join(' ');
-    }
-    return 'Usuario';
   }
 
   void _manejarErrorFirebase(FirebaseAuthException e) {
@@ -323,27 +164,25 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
       'too-many-requests': 'Demasiados intentos fallidos. Intenta más tarde',
       'user-disabled': 'Esta cuenta ha sido deshabilitada',
       'operation-not-allowed': 'Este método de inicio de sesión no está habilitado',
-      'requires-recent-login': 'Esta operación requiere inicio de sesión reciente',
     };
     
     _mostrarSnackBar(mensajesError[e.code] ?? 'Error: ${e.message}', Colors.red);
   }
 
   void _mostrarSnackBar(String mensaje, Color color) {
-    ScaffoldMessenger.of(context).clearSnackBars(); // Limpiar anteriores
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: color == Colors.green ? 3 : 4),
+        duration: Duration(seconds: color == Colors.green ? 3 : 5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   void _navegarAInicio() {
-    // Pequeño delay para que el usuario vea el mensaje de éxito
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
@@ -402,7 +241,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Tarjeta de autenticación
                 Container(
                   width: 400,
                   constraints: const BoxConstraints(maxWidth: 400),
@@ -421,7 +259,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                   ),
                   child: Column(
                     children: [
-                      // Logo/Icono
                       Container(
                         width: 100,
                         height: 100,
@@ -439,7 +276,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                       
                       const SizedBox(height: 25),
                       
-                      // Título
                       Text(
                         _esLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
                         style: const TextStyle(
@@ -451,7 +287,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                       
                       const SizedBox(height: 10),
                       
-                      // Subtítulo
                       Text(
                         _esLogin 
                             ? 'Bienvenido de vuelta a tu biblioteca personal'
@@ -466,7 +301,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                       
                       const SizedBox(height: 30),
                       
-                      // Campos del formulario
                       if (!_esLogin) ...[
                         _construirCampoTexto(
                           _controladorNombre, 
@@ -505,7 +339,6 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                         const SizedBox(height: 20),
                       ],
                       
-                      // Botón principal
                       SizedBox(
                         width: double.infinity,
                         height: 55,
@@ -538,13 +371,39 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                               ),
                       ),
                       
-                      // Elementos adicionales
-                      if (!_estaCargando) ..._construirPieAuth(),
+                      const SizedBox(height: 25),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _alternarModoAuth,
+                            child: Text(
+                              _esLogin ? 'Regístrate aquí' : 'Inicia sesión aquí',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColores.primario,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 10),
                     ],
                   ),
                 ),
                 
-                // Información adicional (fuera de la tarjeta)
                 const SizedBox(height: 30),
                 
                 Text(
@@ -561,103 +420,5 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         ),
       ),
     );
-  }
-
-  List<Widget> _construirPieAuth() {
-    return [
-      const SizedBox(height: 25),
-      
-      // Separador
-      Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: Text(
-              'O continúa con',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-            ),
-          ),
-        ],
-      ),
-      
-      const SizedBox(height: 25),
-      
-      // Botón de Google
-      SizedBox(
-        width: double.infinity,
-        height: 55,
-        child: OutlinedButton.icon(
-          onPressed: _estaCargando ? null : _iniciarSesionConGoogle,
-          icon: Image.asset(
-            'assets/google_logo.png', // Asegúrate de tener este archivo en assets/
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => 
-                const Icon(Icons.g_mobiledata, color: Colors.red),
-          ),
-          label: const Text(
-            'Continuar con Google',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.grey[300]!),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            elevation: 1,
-          ),
-        ),
-      ),
-      
-      const SizedBox(height: 25),
-      
-      // Enlace para alternar entre login/registro
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            _esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _estaCargando ? null : _alternarModoAuth,
-            child: Text(
-              _esLogin ? 'Regístrate aquí' : 'Inicia sesión aquí',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColores.primario,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ],
-      ),
-      
-      const SizedBox(height: 10),
-    ];
   }
 }

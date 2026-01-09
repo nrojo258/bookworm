@@ -5,6 +5,8 @@ class DatosUsuario {
   final String nombre;
   final String correo;
   final DateTime fechaCreacion;
+  final String? urlImagenPerfil;  
+  final String? biografia; 
   final Map<String, dynamic> preferencias;
   final Map<String, dynamic> estadisticas;
   final List<String> generosFavoritos;
@@ -14,6 +16,8 @@ class DatosUsuario {
     required this.nombre,
     required this.correo,
     required this.fechaCreacion,
+    this.urlImagenPerfil,         
+    this.biografia,
     required this.preferencias,
     required this.estadisticas,
     required this.generosFavoritos,
@@ -25,6 +29,8 @@ class DatosUsuario {
       'nombre': nombre,
       'correo': correo,
       'fechaCreacion': Timestamp.fromDate(fechaCreacion),
+      'urlImagenPerfil': urlImagenPerfil,  
+      'biografia': biografia,   
       'preferencias': preferencias,
       'estadisticas': estadisticas,
       'generosFavoritos': generosFavoritos,
@@ -36,7 +42,11 @@ class DatosUsuario {
       uid: map['uid'] ?? '',
       nombre: map['nombre'] ?? '',
       correo: map['correo'] ?? '',
-      fechaCreacion: (map['fechaCreacion'] as Timestamp).toDate(),
+      fechaCreacion: map['fechaCreacion'] != null 
+          ? (map['fechaCreacion'] as Timestamp).toDate()
+          : DateTime.now(),
+      urlImagenPerfil: map['urlImagenPerfil'],  
+      biografia: map['biografia'],            
       preferencias: Map<String, dynamic>.from(map['preferencias'] ?? {}),
       estadisticas: Map<String, dynamic>.from(map['estadisticas'] ?? {}),
       generosFavoritos: List<String>.from(map['generosFavoritos'] ?? []),
