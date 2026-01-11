@@ -11,6 +11,8 @@ import 'componentes.dart';
 import 'chat_clubs.dart';
 import 'graficos_estadisticas.dart';
 import 'sincronizacion_offline.dart';
+import 'detalles_libro.dart';
+import '../API/modelos.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,7 @@ class AppBookWorm extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 74, 111, 165)),
         scaffoldBackgroundColor: AppColores.fondo,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color.fromARGB(255, 74, 111, 165), 
+          backgroundColor: Color.fromARGB(255, 74, 111, 165),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -57,6 +59,10 @@ class AppBookWorm extends StatelessWidget {
           );
         },
         '/sincronizacion': (context) => const PantallaSincronizacion(),
+        '/detalles_libro': (context) {
+          final libro = ModalRoute.of(context)!.settings.arguments as Libro;
+          return DetallesLibro(libro: libro);
+        },
       },
     );
   }

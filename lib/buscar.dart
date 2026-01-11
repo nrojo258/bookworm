@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'diseño.dart';
 import 'componentes.dart';
 import '../API/modelos.dart';
@@ -14,6 +16,8 @@ class Buscar extends StatefulWidget {
 class _BuscarState extends State<Buscar> {
   final TextEditingController _controladorBusqueda = TextEditingController();
   final OpenLibrary _servicioOpenLibrary = OpenLibrary();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   String? _formatoSeleccionado = 'Todos los formatos';
   String? _generoSeleccionado = 'Todos los géneros';
@@ -33,6 +37,38 @@ class _BuscarState extends State<Buscar> {
   void dispose() {
     _controladorBusqueda.dispose();
     super.dispose();
+  }
+
+  Future<void> _guardarLibro(Libro libro) async {
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) {
+        _mostrarError('Debes iniciar sesión para guardar libros');
+        return;
+      }
+
+      await _firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .collection('libros_guardados')
+          .doc(libro.id)
+          .set({
+            'libroId': libro.id,
+            'titulo': libro.titulo,
+            'autores': libro.autores,
+            'descripcion': libro.descripcion,
+            'urlMiniatura': libro.urlMiniatura,
+            'fechaPublicacion': libro.fechaPublicacion,
+            'numeroPaginas': libro.numeroPaginas,
+            'categorias': libro.categorias,
+            'fechaGuardado': FieldValue.serverTimestamp(),
+            'estado': 'guardado',
+          });
+
+      _mostrarExito('"${libro.titulo}" guardado en tu biblioteca');
+    } catch (e) {
+      _mostrarError('Error al guardar libro: $e');
+    }
   }
 
   Future<void> _realizarBusqueda() async {
@@ -105,6 +141,24 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
+  void _mostrarExito(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: AppColores.secundario,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _mostrarDetallesLibro(Libro libro) {
+    Navigator.pushNamed(
+      context,
+      '/detalles_libro',
+      arguments: libro,
+    );
+  }
+
   Widget _seccionResultados() {
     if (_estaCargando) {
       return const IndicadorCarga(mensaje: 'Buscando libros...');
@@ -146,8 +200,148 @@ class _BuscarState extends State<Buscar> {
           ],
         ),
         const SizedBox(height: 16),
-        ..._resultadosBusqueda.map((libro) => TarjetaLibro(libro: libro)),
+        ..._resultadosBusqueda.map((libro) => _construirTarjetaLibro(libro)),
       ],
+    );
+  }
+
+  Widget _construirTarjetaLibro(Libro libro) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: EstilosApp.tarjetaPlana,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Portada del libro
+              GestureDetector(
+                onTap: () => _mostrarDetallesLibro(libro),
+                child: Container(
+                  width: 80,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[200],
+                  ),
+                  child: libro.urlMiniatura != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            libro.urlMiniatura!,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progresoCarga) {
+                              if (progresoCarga == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: progresoCarga.expectedTotalBytes != null
+                                      ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.book, size: 40, color: Colors.grey);
+                            },
+                          ),
+                        )
+                      : const Icon(Icons.book, size: 40, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _mostrarDetallesLibro(libro),
+                      child: Text(
+                        libro.titulo,
+                        style: EstilosApp.tituloPequeno,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    if (libro.autores.isNotEmpty)
+                      Text(
+                        'Por ${libro.autores.join(', ')}',
+                        style: EstilosApp.cuerpoMedio,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    
+                    if (libro.fechaPublicacion != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Publicado: ${libro.fechaPublicacion}',
+                        style: EstilosApp.cuerpoPequeno,
+                      ),
+                    ],
+                    
+                    if (libro.calificacionPromedio != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, size: 16, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${libro.calificacionPromedio!.toStringAsFixed(1)} (${libro.numeroCalificaciones ?? 0})',
+                            style: EstilosApp.cuerpoPequeno,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Column(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.bookmark_add, color: AppColores.primario),
+                    onPressed: () => _guardarLibro(libro),
+                    tooltip: 'Guardar libro',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.visibility, color: AppColores.primario),
+                    onPressed: () => _mostrarDetallesLibro(libro),
+                    tooltip: 'Ver detalles',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          
+          if (libro.descripcion != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              libro.descripcion!,
+              style: EstilosApp.cuerpoPequeno,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _mostrarDetallesLibro(libro),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColores.primario,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Ver Detalles Completos'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
   
