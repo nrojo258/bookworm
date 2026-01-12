@@ -216,14 +216,13 @@ class DatosApp {
   ];
 
   static final List<Map<String, dynamic>> accionesRapidas = [
-    {'etiqueta': 'Buscar', 'icono': Icons.search},
     {'etiqueta': 'Favoritos', 'icono': Icons.favorite},
     {'etiqueta': 'Historial', 'icono': Icons.history},
-    {'etiqueta': 'Recomendados', 'icono': Icons.star},
-    {'etiqueta': 'Clubs', 'icono': Icons.group},
+    {'etiqueta': 'Libros Recomendados', 'icono': Icons.star},
     {'etiqueta': 'Desafíos', 'icono': Icons.emoji_events},
+    {'etiqueta': 'Buscar', 'icono': Icons.search},
+    {'etiqueta': 'Clubs', 'icono': Icons.group},
     {'etiqueta': 'Configuración', 'icono': Icons.settings},
-    {'etiqueta': 'Ayuda', 'icono': Icons.help},
   ];
 
   static final List<Map<String, dynamic>> seccionesPerfil = [

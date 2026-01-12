@@ -6,7 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../modelos/progreso_lectura.dart';
+import 'modelos/progreso_lectura.dart';
 
 class SincronizacionOffline {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

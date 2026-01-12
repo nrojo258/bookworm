@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
-import '../API/modelos.dart';
+import 'API/modelos.dart';
 
 class BotonesBarraApp extends StatelessWidget {
   final String rutaActual;

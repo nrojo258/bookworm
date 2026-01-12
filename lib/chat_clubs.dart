@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../servicio/servicio_firestore.dart'; 
+import 'servicio/servicio_firestore.dart'; 
 
 class ChatClub extends StatefulWidget {
   final String clubId;
@@ -425,6 +425,52 @@ class _ChatClubState extends State<ChatClub> {
     );
   }
 
+  Future<void> _eliminarClub() async {
+    final confirmacion = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar club?', style: EstilosApp.tituloMedio),
+        content: const Text('Esta acción eliminará el club y todos sus mensajes de forma permanente para todos los miembros.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmacion == true) {
+      try {
+        await _servicioFirestore.eliminarClub(widget.clubId);
+        
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Club eliminado exitosamente'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   void _mostrarInfoClub() {
     showDialog(
       context: context,
@@ -463,7 +509,15 @@ class _ChatClubState extends State<ChatClub> {
           ),
         ),
         actions: [
-          if (_rolUsuario == 'creador')
+          if (_rolUsuario == 'creador') ...[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _eliminarClub();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Eliminar Club'),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -471,6 +525,7 @@ class _ChatClubState extends State<ChatClub> {
               },
               child: const Text('Editar'),
             ),
+          ],
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar'),

@@ -12,7 +12,8 @@ import 'chat_clubs.dart';
 import 'graficos_estadisticas.dart';
 import 'sincronizacion_offline.dart';
 import 'detalles_libro.dart';
-import '../API/modelos.dart';
+import 'public_domain.dart';
+import 'API/modelos.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,7 @@ class AppBookWorm extends StatelessWidget {
           );
         },
         '/sincronizacion': (context) => const PantallaSincronizacion(),
+        '/public_domain': (context) => const PublicDomain(),
         '/detalles_libro': (context) {
           final libro = ModalRoute.of(context)!.settings.arguments as Libro;
           return DetallesLibro(libro: libro);
@@ -173,23 +175,37 @@ class _PaginaInicioState extends State<PaginaInicio> {
                     ),
                     itemCount: _mostrarTodosAccesosRapidos ? DatosApp.accionesRapidas.length : 4,
                     itemBuilder: (BuildContext context, int index) {
-                      return Container(
-                        decoration: EstilosApp.tarjetaPlana,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              DatosApp.accionesRapidas[index]['icono'],
-                              size: 32,
-                              color: AppColores.primario,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              DatosApp.accionesRapidas[index]['etiqueta'],
-                              style: EstilosApp.cuerpoPequeno,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                      final accion = DatosApp.accionesRapidas[index];
+                      return InkWell(
+                        onTap: () {
+                          if (accion['etiqueta'] == 'Buscar') {
+                            Navigator.pushNamed(context, '/search');
+                          } else if (accion['etiqueta'] == 'Libros Recomendados') {
+                            Navigator.pushNamed(context, '/public_domain');
+                          } else if (accion['etiqueta'] == 'Clubs') {
+                            Navigator.pushNamed(context, '/clubs');
+                          } else if (['Favoritos', 'Historial', 'Desafíos', 'Configuración'].contains(accion['etiqueta'])) {
+                            Navigator.pushNamed(context, '/perfil');
+                          }
+                        },
+                        child: Container(
+                          decoration: EstilosApp.tarjetaPlana,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                accion['icono'],
+                                size: 32,
+                                color: AppColores.primario,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                accion['etiqueta'],
+                                style: EstilosApp.cuerpoPequeno,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

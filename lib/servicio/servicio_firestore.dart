@@ -365,6 +365,44 @@ class ServicioFirestore {
     }
   }
 
+  Future<void> eliminarClub(String clubId) async {
+    try {
+      final clubSnapshot = await _firestore.collection('clubs').doc(clubId).get();
+      if (!clubSnapshot.exists) return;
+      
+      final miembros = clubSnapshot.data()?['miembros'] as List<dynamic>? ?? [];
+      
+      final batch = _firestore.batch();
+      
+      for (final miembroId in miembros) {
+        final miembroDocRef = _firestore
+            .collection('usuarios')
+            .doc(miembroId.toString())
+            .collection('mis_clubs')
+            .doc(clubId);
+        batch.delete(miembroDocRef);
+      }
+      
+      final mensajesSnapshot = await _firestore
+          .collection('clubs')
+          .doc(clubId)
+          .collection('mensajes')
+          .get();
+      
+      for (final doc in mensajesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      batch.delete(_firestore.collection('clubs').doc(clubId));
+      
+      await batch.commit();
+      print('Club eliminado exitosamente: $clubId');
+    } catch (e) {
+      print('Error eliminando club: $e');
+      throw Exception('Error eliminando club: $e');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> obtenerClubsUsuario() async {
     try {
       final usuario = _auth.currentUser;

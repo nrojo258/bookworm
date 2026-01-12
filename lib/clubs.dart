@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../servicio/servicio_firestore.dart';
+import 'servicio/servicio_firestore.dart';
 
 class Clubs extends StatefulWidget {
   const Clubs({super.key});

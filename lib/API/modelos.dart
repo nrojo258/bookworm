@@ -9,6 +9,9 @@ class Libro {
   final List<String> categorias;
   final double? calificacionPromedio;
   final int? numeroCalificaciones;
+  final String? urlLectura;
+  final bool esAudiolibro;
+  final String? urlVistaPrevia;
 
   Libro({
     required this.id,
@@ -21,7 +24,28 @@ class Libro {
     this.categorias = const [],
     this.calificacionPromedio,
     this.numeroCalificaciones,
+    this.urlLectura,
+    this.esAudiolibro = false,
+    this.urlVistaPrevia,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'titulo': titulo,
+      'autores': autores,
+      'descripcion': descripcion,
+      'urlMiniatura': urlMiniatura,
+      'fechaPublicacion': fechaPublicacion,
+      'numeroPaginas': numeroPaginas,
+      'categorias': categorias,
+      'calificacionPromedio': calificacionPromedio,
+      'numeroCalificaciones': numeroCalificaciones,
+      'urlLectura': urlLectura,
+      'esAudiolibro': esAudiolibro,
+      'urlVistaPrevia': urlVistaPrevia,
+    };
+  }
 
   factory Libro.fromJson(Map<String, dynamic> json) {
   final informacionVolumen = json['volumeInfo'] ?? {};

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../API/modelos.dart';
-import '../API/open_library.dart';
+import 'API/modelos.dart';
+import 'API/open_library.dart';
+import 'API/gutendex_service.dart';
 
 class DetallesLibro extends StatefulWidget {
   final Libro libro;
@@ -20,6 +22,7 @@ class _DetallesLibroState extends State<DetallesLibro> {
   bool _cargandoDetalles = false;
   bool _libroGuardado = false;
   final OpenLibrary _openLibrary = OpenLibrary();
+  final GutendexService _gutendexService = GutendexService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -56,16 +59,24 @@ class _DetallesLibroState extends State<DetallesLibro> {
   Future<void> _cargarDetallesCompletos() async {
     setState(() => _cargandoDetalles = true);
     try {
-      final detalles = await _openLibrary.obtenerDetallesLibro(widget.libro.id);
+      Libro? detalles;
+      if (widget.libro.id.startsWith('guten_')) {
+        detalles = await _gutendexService.obtenerLibroPorId(widget.libro.id);
+      } else {
+        detalles = await _openLibrary.obtenerDetallesLibro(widget.libro.id);
+      }
+      
       if (detalles != null && mounted) {
         setState(() {
-          _libroDetallado = detalles;
+          _libroDetallado = detalles!;
         });
       }
     } catch (e) {
       print('Error cargando detalles: $e');
     } finally {
-      setState(() => _cargandoDetalles = false);
+      if (mounted) {
+        setState(() => _cargandoDetalles = false);
+      }
     }
   }
 
@@ -91,6 +102,7 @@ class _DetallesLibroState extends State<DetallesLibro> {
             'fechaPublicacion': _libroDetallado.fechaPublicacion,
             'numeroPaginas': _libroDetallado.numeroPaginas,
             'categorias': _libroDetallado.categorias,
+            'urlLectura': _libroDetallado.urlLectura,
             'fechaGuardado': FieldValue.serverTimestamp(),
             'estado': 'guardado',
           });
@@ -145,6 +157,21 @@ class _DetallesLibroState extends State<DetallesLibro> {
       _mostrarExito('Progreso iniciado para "${_libroDetallado.titulo}"');
     } catch (e) {
       _mostrarError('Error al iniciar progreso: $e');
+    }
+  }
+
+  Future<void> _abrirUrlLectura() async {
+    if (_libroDetallado.urlLectura == null) return;
+    
+    final url = Uri.parse(_libroDetallado.urlLectura!);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        _mostrarError('No se pudo abrir el enlace de lectura');
+      }
+    } catch (e) {
+      _mostrarError('Error al abrir el libro: $e');
     }
   }
 
@@ -252,6 +279,27 @@ class _DetallesLibroState extends State<DetallesLibro> {
               ),
             ),
             const SizedBox(height: 24),
+            
+            if (_libroDetallado.esAudiolibro)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColores.secundario,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.headset, color: Colors.white, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Audiolibro',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
 
             // Título y autores
             Text(
@@ -339,6 +387,33 @@ class _DetallesLibroState extends State<DetallesLibro> {
               ),
             const SizedBox(height: 32),
 
+            // Botón de Lectura (Gutendex o LibriVox)
+            if (_libroDetallado.urlLectura != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _abrirUrlLectura,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColores.secundario,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(_libroDetallado.esAudiolibro ? Icons.headset : Icons.open_in_browser),
+                      const SizedBox(width: 8),
+                      Text(
+                        _libroDetallado.esAudiolibro ? 'Escuchar (LibriVox)' : 'Leer Online (Gratis)', 
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Botones de acción
             Row(
               children: [
@@ -368,12 +443,12 @@ class _DetallesLibroState extends State<DetallesLibro> {
                       side: const BorderSide(color: AppColores.primario),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.play_arrow),
-                        SizedBox(width: 8),
-                        Text('Comenzar a Leer'),
+                        Icon(_libroDetallado.esAudiolibro ? Icons.play_circle_fill : Icons.play_arrow),
+                        const SizedBox(width: 8),
+                        Text(_libroDetallado.esAudiolibro ? 'Comenzar a Escuchar' : 'Comenzar a Leer'),
                       ],
                     ),
                   ),

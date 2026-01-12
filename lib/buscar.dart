@@ -3,8 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../API/modelos.dart';
-import '../API/open_library.dart';
+import 'API/modelos.dart';
+import 'API/open_library.dart';
+import 'API/gutendex_service.dart';
+import 'API/librivox_service.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
@@ -16,6 +18,8 @@ class Buscar extends StatefulWidget {
 class _BuscarState extends State<Buscar> {
   final TextEditingController _controladorBusqueda = TextEditingController();
   final OpenLibrary _servicioOpenLibrary = OpenLibrary();
+  final GutendexService _servicioGutendex = GutendexService();
+  final LibriVoxService _servicioLibriVox = LibriVoxService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
@@ -61,6 +65,8 @@ class _BuscarState extends State<Buscar> {
             'fechaPublicacion': libro.fechaPublicacion,
             'numeroPaginas': libro.numeroPaginas,
             'categorias': libro.categorias,
+            'urlLectura': libro.urlLectura,
+            'esAudiolibro': libro.esAudiolibro,
             'fechaGuardado': FieldValue.serverTimestamp(),
             'estado': 'guardado',
           });
@@ -87,33 +93,58 @@ class _BuscarState extends State<Buscar> {
     });
 
     try {
-      List<Libro> resultados;
       String consultaBusqueda = _controladorBusqueda.text;
       
-      // Si no hay texto pero hay género, usar el género como consulta
-      if (consultaBusqueda.isEmpty && _generoSeleccionado != null && _generoSeleccionado != 'Todos los géneros') {
-        consultaBusqueda = _generoSeleccionado!;
+      // Solo forzamos una búsqueda por defecto si no hay NADA seleccionado
+      // Si hay género o formato específico, dejamos que los servicios manejen la consulta vacía
+      if (consultaBusqueda.isEmpty && 
+          (_generoSeleccionado == null || _generoSeleccionado == 'Todos los géneros') &&
+          (_formatoSeleccionado == null || _formatoSeleccionado == 'Todos los formatos')) {
+        consultaBusqueda = 'fiction';
       }
       
-      // Si no hay texto ni género específico, hacer una búsqueda general
-      if (consultaBusqueda.isEmpty) {
-        consultaBusqueda = 'fiction'; // Búsqueda general por defecto
+      // Realizar búsquedas según el formato seleccionado
+      List<Future<List<Libro>>> busquedas = [];
+      
+      if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Libros') {
+        busquedas.add(_servicioOpenLibrary.buscarLibros(
+          consulta: consultaBusqueda,
+          genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+          limite: 15,
+        ));
+        busquedas.add(_servicioGutendex.buscarLibros(
+          consulta: consultaBusqueda,
+          genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        ));
       }
       
-      resultados = await _servicioOpenLibrary.buscarLibros(
-        consulta: consultaBusqueda,
-        genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
-        limite: 20,
-      );
+      if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Audiolibros') {
+        busquedas.add(_servicioLibriVox.buscarAudiolibros(
+          consultaBusqueda,
+          genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        ));
+      }
+
+      final listasResultados = await Future.wait(busquedas);
+      List<Libro> resultados = [];
+      
+      // Mezclar resultados
+      int maxLen = listasResultados.map((l) => l.length).fold(0, (prev, element) => element > prev ? element : prev);
+      for (int i = 0; i < maxLen; i++) {
+        for (var lista in listasResultados) {
+          if (i < lista.length) {
+            resultados.add(lista[i]);
+          }
+        }
+      }
       
       // Filtrar por formato si es necesario
       if (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos') {
         if (_formatoSeleccionado == 'Audiolibros') {
-          // Por ahora, mostrar mensaje de que no hay audiolibros disponibles
-          _mostrarError('Los audiolibros estarán disponibles próximamente');
-          resultados = [];
+          resultados = resultados.where((libro) => libro.esAudiolibro).toList();
+        } else if (_formatoSeleccionado == 'Libros') {
+          resultados = resultados.where((libro) => !libro.esAudiolibro).toList();
         }
-        // Si es "Libros", mostrar todos los resultados (son libros físicos)
       }
       
       setState(() {
@@ -216,38 +247,58 @@ class _BuscarState extends State<Buscar> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Portada del libro
               GestureDetector(
                 onTap: () => _mostrarDetallesLibro(libro),
-                child: Container(
-                  width: 80,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey[200],
-                  ),
-                  child: libro.urlMiniatura != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            libro.urlMiniatura!,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progresoCarga) {
-                              if (progresoCarga == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: progresoCarga.expectedTotalBytes != null
-                                      ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.book, size: 40, color: Colors.grey);
-                            },
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[200],
+                      ),
+                      child: libro.urlMiniatura != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                libro.urlMiniatura!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progresoCarga) {
+                                  if (progresoCarga == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: progresoCarga.expectedTotalBytes != null
+                                          ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.book, size: 40, color: Colors.grey);
+                                },
+                              ),
+                            )
+                          : const Icon(Icons.book, size: 40, color: Colors.grey),
+                    ),
+                    if (libro.esAudiolibro)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColores.secundario,
+                            shape: BoxShape.circle,
                           ),
-                        )
-                      : const Icon(Icons.book, size: 40, color: Colors.grey),
+                          child: const Icon(
+                            Icons.headset,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),

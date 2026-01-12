@@ -1,18 +1,19 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'diseño.dart';
 import 'componentes.dart';
-import '../servicio/servicio_firestore.dart';
-import '../modelos/datos_usuario.dart';
-import '../modelos/progreso_lectura.dart';
+import 'servicio/servicio_firestore.dart';
+import 'modelos/datos_usuario.dart';
+import 'modelos/progreso_lectura.dart';
 import 'graficos_estadisticas.dart';
 import 'sincronizacion_offline.dart';
-import '../API/open_library.dart';
-import '../API/modelos.dart';
+import 'API/open_library.dart';
+import 'API/modelos.dart';
 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
@@ -797,8 +798,156 @@ class _PerfilState extends State<Perfil> {
                 ),
               ],
             ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          const Text(
+            'Mis Libros Guardados',
+            style: EstilosApp.tituloMedio,
+          ),
+          const SizedBox(height: 16),
+          _construirListaLibrosGuardados(),
         ],
       ),
+    );
+  }
+
+  Widget _construirListaLibrosGuardados() {
+    if (_cargandoLibros) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_librosGuardados.isEmpty) {
+      return const EstadoVacio(
+        icono: Icons.bookmark_border,
+        titulo: 'No tienes libros guardados',
+        descripcion: 'Guarda libros que te interesen para leer después',
+      );
+    }
+
+    return Column(
+      children: _librosGuardados.map((libroMap) {
+        final libro = Libro(
+          id: libroMap['libroId'],
+          titulo: libroMap['titulo'],
+          autores: List<String>.from(libroMap['autores'] ?? []),
+          descripcion: libroMap['descripcion'],
+          urlMiniatura: libroMap['urlMiniatura'],
+          fechaPublicacion: libroMap['fechaPublicacion'],
+          numeroPaginas: libroMap['numeroPaginas'],
+          categorias: List<String>.from(libroMap['categorias'] ?? []),
+          urlLectura: libroMap['urlLectura'],
+        );
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: EstilosApp.tarjetaPlana,
+          child: InkWell(
+            onTap: () => _mostrarDetallesLibro(libro),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (libro.urlMiniatura != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      libro.urlMiniatura!,
+                      width: 60,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 60,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  )
+                else
+                  Container(
+                    width: 60,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                  ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        libro.titulo,
+                        style: EstilosApp.tituloPequeno,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      if (libro.autores.isNotEmpty)
+                        Text(
+                          libro.autores.join(', '),
+                          style: EstilosApp.cuerpoPequeno,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _obtenerColorEstado(libroMap['estado']),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _obtenerTextoEstado(libroMap['estado']),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  children: [
+                    if (libro.urlLectura != null)
+                      IconButton(
+                        icon: const Icon(Icons.open_in_browser, color: AppColores.secundario),
+                        onPressed: () => _abrirUrlLectura(libro.urlLectura),
+                        tooltip: 'Leer Online',
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow, color: AppColores.primario),
+                      onPressed: libroMap['estado'] == 'guardado' 
+                        ? () => _iniciarProgresoLectura(libroMap)
+                        : null,
+                      tooltip: 'Comenzar a leer',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _eliminarLibroGuardado(libroMap['libroId']),
+                      tooltip: 'Eliminar',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -815,10 +964,20 @@ class _PerfilState extends State<Perfil> {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: EstilosApp.tarjeta,
-        child: const EstadoVacio(
-          icono: Icons.book,
-          titulo: 'No tienes lecturas en progreso',
-          descripcion: 'Empieza a leer un libro para ver tu progreso aquí',
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mi Progreso',
+              style: EstilosApp.tituloMedio,
+            ),
+            SizedBox(height: 16),
+            EstadoVacio(
+              icono: Icons.book,
+              titulo: 'No tienes lecturas en progreso',
+              descripcion: 'Empieza a leer un libro para ver tu progreso aquí',
+            ),
+          ],
         ),
       );
     }
@@ -830,7 +989,7 @@ class _PerfilState extends State<Perfil> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Progreso de Lectura',
+            'Mi Progreso',
             style: EstilosApp.tituloMedio,
           ),
           const SizedBox(height: 16),
@@ -1077,144 +1236,6 @@ class _PerfilState extends State<Perfil> {
             icono: Icons.help,
             alPresionar: () => _mostrarDialogoAyuda(),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _construirSeccionLibrosGuardados() {
-    if (_cargandoLibros) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.tarjeta,
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_librosGuardados.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.tarjeta,
-        child: const EstadoVacio(
-          icono: Icons.bookmark_border,
-          titulo: 'No tienes libros guardados',
-          descripcion: 'Guarda libros que te interesen para leer después',
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: EstilosApp.tarjeta,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Libros Guardados',
-            style: EstilosApp.tituloMedio,
-          ),
-          const SizedBox(height: 16),
-          ..._librosGuardados.map((libro) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: EstilosApp.tarjetaPlana,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (libro['urlMiniatura'] != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        libro['urlMiniatura'],
-                        width: 60,
-                        height: 90,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.book, size: 30, color: Colors.grey),
-                          );
-                        },
-                      ),
-                    )
-                  else
-                    Container(
-                      width: 60,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.book, size: 30, color: Colors.grey),
-                    ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          libro['titulo'] ?? 'Sin título',
-                          style: EstilosApp.tituloPequeno,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        if (libro['autores'] != null && libro['autores'].isNotEmpty)
-                          Text(
-                            libro['autores'].join(', '),
-                            style: EstilosApp.cuerpoPequeno,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _obtenerColorEstado(libro['estado']),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _obtenerTextoEstado(libro['estado']),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.play_arrow, color: AppColores.primario),
-                        onPressed: libro['estado'] == 'guardado' 
-                          ? () => _iniciarProgresoLectura(libro)
-                          : null,
-                        tooltip: 'Comenzar a leer',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _eliminarLibroGuardado(libro['libroId']),
-                        tooltip: 'Eliminar',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
         ],
       ),
     );
@@ -1518,6 +1539,29 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
+  void _mostrarDetallesLibro(Libro libro) {
+    Navigator.pushNamed(
+      context,
+      '/detalles_libro',
+      arguments: libro,
+    );
+  }
+
+  Future<void> _abrirUrlLectura(String? urlLectura) async {
+    if (urlLectura == null) return;
+    
+    final url = Uri.parse(urlLectura);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        _mostrarError('No se pudo abrir el enlace de lectura');
+      }
+    } catch (e) {
+      _mostrarError('Error al abrir el libro: $e');
+    }
+  }
+
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1557,22 +1601,6 @@ class _PerfilState extends State<Perfil> {
             _construirSelectorSeccion(),
             const SizedBox(height: 20),
             _construirContenidoSeccion(),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: EstilosApp.tarjeta,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Mi Biblioteca',
-                    style: EstilosApp.tituloMedio,
-                  ),
-                  const SizedBox(height: 16),
-                  _construirSeccionLibrosGuardados(),
-                ],
-              ),
-            ),
             const SizedBox(height: 40),
             Row(
               children: [

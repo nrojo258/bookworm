@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'diseño.dart';
-import '../servicio/servicio_firestore.dart'; 
-import '../modelos/datos_usuario.dart'; 
+import 'servicio/servicio_firestore.dart'; 
+import 'modelos/datos_usuario.dart'; 
 
 class Autenticacion extends StatefulWidget {
   const Autenticacion({super.key});
