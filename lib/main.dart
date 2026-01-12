@@ -1,122 +1,220 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'buscar.dart'; 
-import 'clubs.dart'; 
+import 'autenticación.dart';
+import 'buscar.dart';
+import 'clubs.dart';
 import 'perfil.dart';
-
-const Color _kBlockColor = Color(0xFFE0E0E0);
-const TextStyle _kLinkStyle = TextStyle(fontSize: 18, color: Colors.black54);
-const TextStyle _kHeaderStyle = TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54);
-const double _kSpacing = 20.0; 
+import 'diseño.dart';
+import 'componentes.dart';
+import 'chat_clubs.dart';
+import 'graficos_estadisticas.dart';
+import 'sincronizacion_offline.dart';
+import 'detalles_libro.dart';
+import '../API/modelos.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const BookWormApp());
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const AppBookWorm());
 }
 
-class BookWormApp extends StatelessWidget {
-  const BookWormApp({super.key});
+class AppBookWorm extends StatelessWidget {
+  const AppBookWorm({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BookWorm',
-      debugShowCheckedModeBanner: false, 
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.grey,
-        scaffoldBackgroundColor: const Color(0xFFF0F0F0),
+        primaryColor: AppColores.primario,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 74, 111, 165)),
+        scaffoldBackgroundColor: AppColores.fondo,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
+          backgroundColor: Color.fromARGB(255, 74, 111, 165),
+          foregroundColor: Colors.white,
+          elevation: 0,
         ),
+        elevatedButtonTheme: ElevatedButtonThemeData(style: EstilosApp.botonPrimario),
       ),
       routes: {
-        '/': (context) => const BookWormHomePage(),
+        '/': (context) => const Autenticacion(),
+        '/home': (context) => const PaginaInicio(),
         '/search': (context) => const Buscar(),
-        '/clubs': (context) => const Clubs(), 
-        '/perfil': (context) => const Perfil(), 
+        '/clubs': (context) => const Clubs(),
+        '/perfil': (context) => const Perfil(),
+        '/chat_club': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return ChatClub(
+            clubId: args['clubId'],
+            clubNombre: args['clubNombre'],
+          );
+        },
+        '/graficos': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return GraficosEstadisticas(
+            datosEstadisticas: args['datosEstadisticas'],
+          );
+        },
+        '/sincronizacion': (context) => const PantallaSincronizacion(),
+        '/detalles_libro': (context) {
+          final libro = ModalRoute.of(context)!.settings.arguments as Libro;
+          return DetallesLibro(libro: libro);
+        },
       },
-      initialRoute: '/',
     );
   }
 }
 
-class BookWormHomePage extends StatelessWidget {
-  const BookWormHomePage({super.key});
+class PaginaInicio extends StatefulWidget {
+  const PaginaInicio({super.key});
+
+  @override
+  State<PaginaInicio> createState() => _PaginaInicioState();
+}
+
+class _PaginaInicioState extends State<PaginaInicio> {
+  bool _mostrarTodosAccesosRapidos = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
-        title: const Text(
-          'BookWorm',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        title: GestureDetector(
+          onTap: () {
+            Navigator.pushReplacementNamed(context, '/home');
+          },
+          child: const Text('BookWorm', style: EstilosApp.tituloGrande),
         ),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/search'), child: const Text('Buscar', style: _kLinkStyle)),
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/clubs'), child: const Text('Clubs', style: _kLinkStyle)), 
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/perfil'), child: const Text('Perfil', style: _kLinkStyle)), 
-          const SizedBox(width: _kSpacing),
-        ],
+        actions: const [BotonesBarraApp(rutaActual: '/home')],
       ),
-      
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(_kSpacing),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-
             Container(
-              height: 150, 
-              color: _kBlockColor,
-              margin: const EdgeInsets.only(bottom: _kSpacing),
-              padding: const EdgeInsets.symmetric(horizontal: _kSpacing),
-              alignment: Alignment.bottomLeft,
+              height: 180,
+              decoration: EstilosApp.decoracionGradiente,
+              padding: const EdgeInsets.all(24),
               child: Row(
                 children: <Widget>[
-                  InkWell( 
-                    onTap: () => Navigator.pushNamed(context, '/search'),
-                    child: const Text(
-                      'Buscar libros', 
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Bienvenido de vuelta',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Continúa tu aventura literaria',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            BotonAccionRapida(
+                              texto: 'Buscar libros',
+                              icono: Icons.search,
+                              alPresionar: () => Navigator.pushNamed(context, '/search'),
+                            ),
+                            const SizedBox(width: 12),
+                            BotonAccionRapida(
+                              texto: 'Ver progreso',
+                              icono: Icons.trending_up,
+                              alPresionar: () => Navigator.pushNamed(context, '/perfil'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 30),
-                  InkWell( 
-                    onTap: () => Navigator.pushNamed(context, '/progress'),
-                    child: const Text(
-                      'Ver progreso', 
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    size: 80,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: EstilosApp.tarjeta,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Acceso rápido',
+                    style: EstilosApp.tituloMedio,
+                  ),
+                  const SizedBox(height: 16),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _mostrarTodosAccesosRapidos ? DatosApp.accionesRapidas.length : 4,
+                    itemBuilder: (BuildContext context, int index) {
+                      return Container(
+                        decoration: EstilosApp.tarjetaPlana,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              DatosApp.accionesRapidas[index]['icono'],
+                              size: 32,
+                              color: AppColores.primario,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              DatosApp.accionesRapidas[index]['etiqueta'],
+                              style: EstilosApp.cuerpoPequeno,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _mostrarTodosAccesosRapidos = !_mostrarTodosAccesosRapidos;
+                        });
+                      },
+                      child: Text(
+                        _mostrarTodosAccesosRapidos ? 'Ver menos' : 'Ver más',
+                        style: const TextStyle(
+                          color: AppColores.primario,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: _kSpacing,
-                mainAxisSpacing: _kSpacing,
-                childAspectRatio: 1.0,
-              ),
-              itemCount: 4,
-              itemBuilder: (BuildContext context, int index) {
-                return const Card(
-                  color: _kBlockColor,
-                  elevation: 0,
-                );
-              },
-            ),
-            const SizedBox(height: _kSpacing),
+            const SizedBox(height: 24),
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,29 +222,52 @@ class BookWormHomePage extends StatelessWidget {
                 Expanded(
                   flex: 2,
                   child: Container(
-                    height: 250,
-                    color: _kBlockColor,
-                    padding: const EdgeInsets.all(_kSpacing),
+                    height: 280,
+                    padding: const EdgeInsets.all(24),
+                    decoration: EstilosApp.tarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text('Mis lecturas actuales', style: _kHeaderStyle),
+                        Text(
+                          'Mis lecturas actuales',
+                          style: EstilosApp.tituloPequeno,
+                        ),
+                        SizedBox(height: 16),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'No tienes lecturas en progreso',
+                              style: EstilosApp.cuerpoMedio,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: _kSpacing),
-
+                const SizedBox(width: 16),
                 Expanded(
                   flex: 1,
                   child: Container(
-                    height: 250,
-                    color: _kBlockColor,
-                    padding: const EdgeInsets.all(_kSpacing),
+                    height: 280,
+                    padding: const EdgeInsets.all(24),
+                    decoration: EstilosApp.tarjeta,
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text('Actividad reciente', style: _kHeaderStyle),
+                        Text(
+                          'Actividad reciente',
+                          style: EstilosApp.tituloPequeno,
+                        ),
+                        SizedBox(height: 16),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'No hay actividad reciente',
+                              style: EstilosApp.cuerpoMedio,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
