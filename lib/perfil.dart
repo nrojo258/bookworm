@@ -37,6 +37,7 @@ class _PerfilState extends State<Perfil> {
   
   // Libros guardados
   List<Map<String, dynamic>> _librosGuardados = [];
+  List<Map<String, dynamic>> _librosFavoritos = [];
   bool _cargandoLibros = false;
   
   // Progresos de lectura
@@ -90,12 +91,15 @@ class _PerfilState extends State<Perfil> {
           .get();
       
       if (mounted) {
+        final todosLosLibros = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+
         setState(() {
-          _librosGuardados = snapshot.docs.map((doc) {
-            final data = doc.data();
-            data['id'] = doc.id;
-            return data;
-          }).toList();
+          _librosFavoritos = todosLosLibros.where((l) => l['favorito'] == true).toList();
+          _librosGuardados = todosLosLibros.where((l) => l['favorito'] != true).toList();
         });
       }
     } catch (e) {
@@ -802,34 +806,45 @@ class _PerfilState extends State<Perfil> {
           const Divider(),
           const SizedBox(height: 16),
           const Text(
+            'Mis Libros Favoritos',
+            style: EstilosApp.tituloMedio,
+          ),
+          const SizedBox(height: 16),
+          _construirListaLibros(libros: _librosFavoritos, esFavoritos: true),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          const Text(
             'Mis Libros Guardados',
             style: EstilosApp.tituloMedio,
           ),
           const SizedBox(height: 16),
-          _construirListaLibrosGuardados(),
+          _construirListaLibros(libros: _librosGuardados, esFavoritos: false),
         ],
       ),
     );
   }
 
-  Widget _construirListaLibrosGuardados() {
+  Widget _construirListaLibros({required List<Map<String, dynamic>> libros, required bool esFavoritos}) {
     if (_cargandoLibros) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_librosGuardados.isEmpty) {
-      return const EstadoVacio(
-        icono: Icons.bookmark_border,
-        titulo: 'No tienes libros guardados',
-        descripcion: 'Guarda libros que te interesen para leer después',
+    if (libros.isEmpty) {
+      return EstadoVacio(
+        icono: esFavoritos ? Icons.favorite_border : Icons.bookmark_border,
+        titulo: esFavoritos ? 'No tienes favoritos' : 'No tienes libros guardados',
+        descripcion: esFavoritos 
+            ? 'Añade libros a tus favoritos para verlos aquí' 
+            : 'Guarda libros que te interesen para leer después',
       );
     }
 
     return Column(
-      children: _librosGuardados.map((libroMap) {
+      children: libros.map((libroMap) {
         final libro = Libro(
-          id: libroMap['libroId'],
-          titulo: libroMap['titulo'],
+          id: libroMap['libroId'] ?? '',
+          titulo: libroMap['titulo'] ?? 'Sin título',
           autores: List<String>.from(libroMap['autores'] ?? []),
           descripcion: libroMap['descripcion'],
           urlMiniatura: libroMap['urlMiniatura'],
@@ -837,6 +852,7 @@ class _PerfilState extends State<Perfil> {
           numeroPaginas: libroMap['numeroPaginas'],
           categorias: List<String>.from(libroMap['categorias'] ?? []),
           urlLectura: libroMap['urlLectura'],
+          esAudiolibro: libroMap['esAudiolibro'] ?? false,
         );
 
         return Container(
@@ -901,6 +917,20 @@ class _PerfilState extends State<Perfil> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
+                          if (esFavoritos)
+                            const Icon(Icons.favorite, size: 16, color: Colors.red)
+                          else
+                            const Icon(Icons.bookmark, size: 16, color: AppColores.primario),
+                          const SizedBox(width: 4),
+                          Text(
+                            esFavoritos ? 'Favorito' : 'Guardado',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: esFavoritos ? Colors.red : AppColores.primario,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -910,7 +940,7 @@ class _PerfilState extends State<Perfil> {
                             child: Text(
                               _obtenerTextoEstado(libroMap['estado']),
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 10,
                                 color: Colors.white,
                               ),
                             ),
@@ -920,26 +950,32 @@ class _PerfilState extends State<Perfil> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Column(
                   children: [
                     if (libro.urlLectura != null)
                       IconButton(
-                        icon: const Icon(Icons.open_in_browser, color: AppColores.secundario),
+                        icon: const Icon(Icons.open_in_browser, size: 20, color: AppColores.secundario),
                         onPressed: () => _abrirUrlLectura(libro.urlLectura),
                         tooltip: 'Leer Online',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
                       ),
                     IconButton(
-                      icon: const Icon(Icons.play_arrow, color: AppColores.primario),
+                      icon: const Icon(Icons.play_arrow, size: 20, color: AppColores.primario),
                       onPressed: libroMap['estado'] == 'guardado' 
                         ? () => _iniciarProgresoLectura(libroMap)
                         : null,
                       tooltip: 'Comenzar a leer',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
                       onPressed: () => _eliminarLibroGuardado(libroMap['libroId']),
                       tooltip: 'Eliminar',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
                     ),
                   ],
                 ),

@@ -5,80 +5,72 @@ import 'modelos.dart';
 class LibriVoxService {
   static const String _urlBase = 'https://librivox.org/api/feed/audiobooks';
 
-  Future<List<Libro>> buscarAudiolibros(String consulta, {String? genero}) async {
+  Future<List<Libro>> buscarLibros(String consulta, {String? genero, int limite = 20}) async {
     try {
       final consultaCodificada = Uri.encodeComponent(consulta);
-      String url = 'https://librivox.org/api/feed/audiobooks?format=json';
+      String url = '$_urlBase?format=json';
       
-      // Si el usuario escribió algo específicamente (no es el default 'fiction')
       if (consulta.isNotEmpty && consulta.toLowerCase() != 'fiction') {
-        // Usamos el prefijo ^ para búsqueda parcial al inicio, que es más flexible en LibriVox
         url += '&title=%5E$consultaCodificada';
       } else if (consulta.toLowerCase() == 'fiction' && (genero == null || genero == 'Todos los géneros')) {
-        // Si es la búsqueda por defecto, pedimos libros recientes (limit)
-        // ya que genre=Fiction a veces da error 500 en la API JSON
-        url += '&limit=20';
+        url += '&limit=$limite';
       }
       
       if (genero != null && genero != 'Todos los géneros') {
-        final generoIngles = _mapearGenero(genero);
-        url += '&genre=${Uri.encodeComponent(generoIngles)}';
+        url += '&genre=${Uri.encodeComponent(_mapearGenero(genero))}';
       }
       
-      // Si no hay nada, buscamos algo por defecto para que no salga vacío
       if (consulta.isEmpty && (genero == null || genero == 'Todos los géneros')) {
-        url += '&limit=20';
+        url += '&limit=$limite';
       }
 
-      print('URL LibriVox: $url');
       var respuesta = await http.get(Uri.parse(url));
 
-      // Si da error 500 y teníamos un género, reintentamos sin el género para no dejar al usuario sin nada
       if (respuesta.statusCode == 500 && url.contains('&genre=')) {
-        print('Error 500 detectado en LibriVox con género, reintentando sin filtro de género');
         final nuevaUrl = url.split('&genre=')[0];
         respuesta = await http.get(Uri.parse(nuevaUrl));
       }
 
       if (respuesta.statusCode == 200) {
         final datos = json.decode(respuesta.body);
-        print('LibriVox respondió correctamente');
-        
-        dynamic books;
-        if (datos is Map) {
-          books = datos['books'];
-        } else if (datos is List) {
-          books = datos;
-        }
+        final books = (datos is Map) ? datos['books'] : datos;
 
         if (books == null || books is! List || books.isEmpty) {
-          print('No hay libros en la respuesta de LibriVox, probando por autor...');
+          if (url.contains('title=%5E')) {
+            final urlSimple = url.replaceFirst('title=%5E', 'title=');
+            final respuestaSimple = await http.get(Uri.parse(urlSimple));
+            if (respuestaSimple.statusCode == 200) {
+              final datosSimple = json.decode(respuestaSimple.body);
+              final booksSimple = (datosSimple is Map) ? datosSimple['books'] : datosSimple;
+              if (booksSimple != null && booksSimple is List && booksSimple.isNotEmpty) {
+                return booksSimple.map<Libro>((book) => _mapearLibro(book as Map<String, dynamic>)).toList();
+              }
+            }
+          }
           if (consulta.isNotEmpty && consulta.toLowerCase() != 'fiction') {
             return _buscarPorAutor(consulta);
           }
           return [];
         }
-        
-        print('Encontrados ${books.length} audiolibros en LibriVox');
-        return books.map<Libro>((book) => _mapearLibro(book as Map<String, dynamic>)).toList();
-      } else {
-        print('Error en LibriVox: ${respuesta.statusCode}');
-        if (consulta.isNotEmpty && consulta.toLowerCase() != 'fiction') {
-          return _buscarPorAutor(consulta);
-        }
-        return [];
+        return (books as List).map<Libro>((book) => _mapearLibro(book as Map<String, dynamic>)).toList();
       }
+      return [];
     } catch (e) {
+      print('Error en LibriVox: $e');
       return [];
     }
   }
 
+  Future<Libro?> obtenerDetalles(String id) async {
+    // LibriVox API feed doesn't have a direct "get by id" in the same way, 
+    // but we can search by id if needed. Usually we have the full object.
+    return null; 
+  }
+
   Future<List<Libro>> _buscarPorAutor(String consulta) async {
     try {
-      // Usamos ^ para búsqueda parcial por autor también
       final url = '$_urlBase?author=%5E${Uri.encodeComponent(consulta)}&format=json';
       final respuesta = await http.get(Uri.parse(url));
-      
       if (respuesta.statusCode == 200) {
         final datos = json.decode(respuesta.body);
         final books = (datos is Map) ? datos['books'] : datos;
@@ -112,7 +104,6 @@ class LibriVoxService {
   }
 
   Libro _mapearLibro(Map<String, dynamic> json) {
-    // Extraer autores
     List<String> autores = [];
     if (json['authors'] != null && json['authors'] is List) {
       autores = (json['authors'] as List).map<String>((a) {
@@ -120,21 +111,21 @@ class LibriVoxService {
       }).toList();
     }
 
-    // LibriVox no suele dar miniaturas directas en este feed, 
-    // pero podemos usar una por defecto o intentar obtenerla si estuviera disponible.
-    // Usaremos el id de Gutenberg si está disponible para la carátula o una genérica.
-    
-    // Aseguramos un ID válido
     final id = json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
     
     return Libro(
       id: 'librivox_$id',
       titulo: json['title'] ?? 'Título no disponible',
       autores: autores,
-      descripcion: json['description'] ?? 'Audiolibro gratuito de LibriVox.',
-      urlLectura: json['url_librivox'], // Enlace a la página del audiolibro
+      descripcion: _limpiarHtml(json['description']) ?? 'Audiolibro gratuito de LibriVox.',
+      urlLectura: json['url_librivox'],
       esAudiolibro: true,
-      urlVistaPrevia: json['url_zip_file'], // Enlace al archivo completo o stream
+      urlVistaPrevia: json['url_zip_file'],
     );
+  }
+
+  String? _limpiarHtml(String? texto) {
+    if (texto == null) return null;
+    return texto.replaceAll(RegExp(r'<[^>]*>|&[^;]+;'), ' ').trim();
   }
 }

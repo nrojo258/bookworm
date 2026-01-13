@@ -7,6 +7,8 @@ import 'API/modelos.dart';
 import 'API/open_library.dart';
 import 'API/gutendex_service.dart';
 import 'API/librivox_service.dart';
+import 'API/google_books_service.dart';
+import 'API/internet_archive_service.dart';
 
 class Buscar extends StatefulWidget {
   const Buscar({super.key});
@@ -17,9 +19,11 @@ class Buscar extends StatefulWidget {
 
 class _BuscarState extends State<Buscar> {
   final TextEditingController _controladorBusqueda = TextEditingController();
-  final OpenLibrary _servicioOpenLibrary = OpenLibrary();
+  final OpenLibraryService _servicioOpenLibrary = OpenLibraryService();
   final GutendexService _servicioGutendex = GutendexService();
   final LibriVoxService _servicioLibriVox = LibriVoxService();
+  final GoogleBooksService _servicioGoogleBooks = GoogleBooksService(apiKey: 'AIzaSyBr-6JMgXDq5Ov_wV3hxykLnVujEn2YK6Y');
+  final InternetArchiveService _servicioInternetArchive = InternetArchiveService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
@@ -43,7 +47,7 @@ class _BuscarState extends State<Buscar> {
     super.dispose();
   }
 
-  Future<void> _guardarLibro(Libro libro) async {
+  Future<void> _guardarLibro(Libro libro, {bool favorito = false}) async {
     try {
       final usuario = _auth.currentUser;
       if (usuario == null) {
@@ -51,34 +55,28 @@ class _BuscarState extends State<Buscar> {
         return;
       }
 
+      final datosLibro = libro.toMap();
+      datosLibro['fechaGuardado'] = FieldValue.serverTimestamp();
+      datosLibro['estado'] = 'guardado';
+      datosLibro['libroId'] = libro.id;
+      datosLibro['favorito'] = favorito;
+
       await _firestore
           .collection('usuarios')
           .doc(usuario.uid)
           .collection('libros_guardados')
           .doc(libro.id)
-          .set({
-            'libroId': libro.id,
-            'titulo': libro.titulo,
-            'autores': libro.autores,
-            'descripcion': libro.descripcion,
-            'urlMiniatura': libro.urlMiniatura,
-            'fechaPublicacion': libro.fechaPublicacion,
-            'numeroPaginas': libro.numeroPaginas,
-            'categorias': libro.categorias,
-            'urlLectura': libro.urlLectura,
-            'esAudiolibro': libro.esAudiolibro,
-            'fechaGuardado': FieldValue.serverTimestamp(),
-            'estado': 'guardado',
-          });
+          .set(datosLibro);
 
-      _mostrarExito('"${libro.titulo}" guardado en tu biblioteca');
+      _mostrarExito(favorito 
+          ? '"${libro.titulo}" añadido a tus favoritos' 
+          : '"${libro.titulo}" guardado en tu biblioteca');
     } catch (e) {
       _mostrarError('Error al guardar libro: $e');
     }
   }
 
   Future<void> _realizarBusqueda() async {
-    // Permitir búsqueda sin texto si hay filtros seleccionados
     bool tieneFiltros = (_generoSeleccionado != null && _generoSeleccionado != 'Todos los géneros') || 
                        (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos');
     
@@ -94,32 +92,36 @@ class _BuscarState extends State<Buscar> {
 
     try {
       String consultaBusqueda = _controladorBusqueda.text;
-      
-      // Solo forzamos una búsqueda por defecto si no hay NADA seleccionado
-      // Si hay género o formato específico, dejamos que los servicios manejen la consulta vacía
       if (consultaBusqueda.isEmpty && 
           (_generoSeleccionado == null || _generoSeleccionado == 'Todos los géneros') &&
           (_formatoSeleccionado == null || _formatoSeleccionado == 'Todos los formatos')) {
         consultaBusqueda = 'fiction';
       }
       
-      // Realizar búsquedas según el formato seleccionado
       List<Future<List<Libro>>> busquedas = [];
       
       if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Libros') {
         busquedas.add(_servicioOpenLibrary.buscarLibros(
-          consulta: consultaBusqueda,
+          consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
           limite: 15,
         ));
         busquedas.add(_servicioGutendex.buscarLibros(
-          consulta: consultaBusqueda,
+          consultaBusqueda,
+          genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        ));
+        busquedas.add(_servicioGoogleBooks.buscarLibros(
+          consultaBusqueda,
+          genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
+        ));
+        busquedas.add(_servicioInternetArchive.buscarLibros(
+          consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
         ));
       }
       
       if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Audiolibros') {
-        busquedas.add(_servicioLibriVox.buscarAudiolibros(
+        busquedas.add(_servicioLibriVox.buscarLibros(
           consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
         ));
@@ -128,7 +130,6 @@ class _BuscarState extends State<Buscar> {
       final listasResultados = await Future.wait(busquedas);
       List<Libro> resultados = [];
       
-      // Mezclar resultados
       int maxLen = listasResultados.map((l) => l.length).fold(0, (prev, element) => element > prev ? element : prev);
       for (int i = 0; i < maxLen; i++) {
         for (var lista in listasResultados) {
@@ -138,7 +139,6 @@ class _BuscarState extends State<Buscar> {
         }
       }
       
-      // Filtrar por formato si es necesario
       if (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos') {
         if (_formatoSeleccionado == 'Audiolibros') {
           resultados = resultados.where((libro) => libro.esAudiolibro).toList();
@@ -221,13 +221,6 @@ class _BuscarState extends State<Buscar> {
               '${_resultadosBusqueda.length} resultados encontrados',
               style: EstilosApp.cuerpoMedio,
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Color.fromRGBO(74, 111, 165, 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -264,16 +257,6 @@ class _BuscarState extends State<Buscar> {
                               child: Image.network(
                                 libro.urlMiniatura!,
                                 fit: BoxFit.cover,
-                                loadingBuilder: (context, child, progresoCarga) {
-                                  if (progresoCarga == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: progresoCarga.expectedTotalBytes != null
-                                          ? progresoCarga.cumulativeBytesLoaded / progresoCarga.expectedTotalBytes!
-                                          : null,
-                                    ),
-                                  );
-                                },
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Icon(Icons.book, size: 40, color: Colors.grey);
                                 },
@@ -316,7 +299,6 @@ class _BuscarState extends State<Buscar> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
                     if (libro.autores.isNotEmpty)
                       Text(
                         'Por ${libro.autores.join(', ')}',
@@ -324,7 +306,6 @@ class _BuscarState extends State<Buscar> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    
                     if (libro.fechaPublicacion != null) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -332,7 +313,6 @@ class _BuscarState extends State<Buscar> {
                         style: EstilosApp.cuerpoPequeno,
                       ),
                     ],
-                    
                     if (libro.calificacionPromedio != null) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -352,20 +332,19 @@ class _BuscarState extends State<Buscar> {
               Column(
                 children: [
                   IconButton(
+                    icon: const Icon(Icons.favorite_border, color: AppColores.primario),
+                    onPressed: () => _guardarLibro(libro, favorito: true),
+                    tooltip: 'Añadir a favoritos',
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.bookmark_add, color: AppColores.primario),
                     onPressed: () => _guardarLibro(libro),
                     tooltip: 'Guardar libro',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.visibility, color: AppColores.primario),
-                    onPressed: () => _mostrarDetallesLibro(libro),
-                    tooltip: 'Ver detalles',
                   ),
                 ],
               ),
             ],
           ),
-          
           if (libro.descripcion != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -375,7 +354,6 @@ class _BuscarState extends State<Buscar> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          
           const SizedBox(height: 12),
           Row(
             children: [
@@ -406,7 +384,6 @@ class _BuscarState extends State<Buscar> {
         automaticallyImplyLeading: false,
         actions: const [BotonesBarraApp(rutaActual: '/search')],
       ),
-      
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -417,24 +394,16 @@ class _BuscarState extends State<Buscar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Encuentra tu próximo libro',
-                    style: EstilosApp.tituloMedio,
-                  ),
+                  const Text('Encuentra tu próximo libro', style: EstilosApp.tituloMedio),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Busca entre miles de libros y audiolibros',
-                    style: EstilosApp.cuerpoMedio,
-                  ),
+                  const Text('Busca entre miles de libros y audiolibros', style: EstilosApp.cuerpoMedio),
                   const SizedBox(height: 20),
-                  
                   BarraBusquedaPersonalizada(
                     controlador: _controladorBusqueda,
                     textoHint: 'Ej: Harry Potter, Stephen King, o deja vacío para buscar por filtros',
                     alBuscar: _realizarBusqueda,
                   ),
                   const SizedBox(height: 20),
-
                   Row(
                     children: [
                       Expanded(
@@ -472,17 +441,13 @@ class _BuscarState extends State<Buscar> {
               ),
             ),
             const SizedBox(height: 20),
-
             Container(
               padding: const EdgeInsets.all(24),
               decoration: EstilosApp.tarjeta,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Resultados de búsqueda',
-                    style: EstilosApp.tituloMedio,
-                  ),
+                  const Text('Resultados de búsqueda', style: EstilosApp.tituloMedio),
                   const SizedBox(height: 16),
                   _seccionResultados(),
                 ],

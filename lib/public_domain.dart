@@ -49,24 +49,17 @@ class _PublicDomainState extends State<PublicDomain> {
         return;
       }
 
+      final datosLibro = libro.toMap();
+      datosLibro['fechaGuardado'] = FieldValue.serverTimestamp();
+      datosLibro['estado'] = 'guardado';
+      datosLibro['libroId'] = libro.id;
+
       await _firestore
           .collection('usuarios')
           .doc(usuario.uid)
           .collection('libros_guardados')
           .doc(libro.id)
-          .set({
-            'libroId': libro.id,
-            'titulo': libro.titulo,
-            'autores': libro.autores,
-            'descripcion': libro.descripcion,
-            'urlMiniatura': libro.urlMiniatura,
-            'fechaPublicacion': libro.fechaPublicacion,
-            'numeroPaginas': libro.numeroPaginas,
-            'categorias': libro.categorias,
-            'urlLectura': libro.urlLectura,
-            'fechaGuardado': FieldValue.serverTimestamp(),
-            'estado': 'guardado',
-          });
+          .set(datosLibro);
 
       _mostrarExito('"${libro.titulo}" guardado en tu biblioteca');
     } catch (e) {

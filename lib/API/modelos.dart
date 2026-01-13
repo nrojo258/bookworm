@@ -48,20 +48,52 @@ class Libro {
   }
 
   factory Libro.fromJson(Map<String, dynamic> json) {
-  final informacionVolumen = json['volumeInfo'] ?? {};
-  final enlacesImagen = informacionVolumen['imageLinks'] ?? {};
+    final informacionVolumen = json['volumeInfo'] ?? {};
+    final enlacesImagen = informacionVolumen['imageLinks'] ?? {};
 
-  return Libro(
-    id: json['id'] ?? '',  
-    titulo: informacionVolumen['title'] ?? 'Título no disponible',  
-    autores: List<String>.from(informacionVolumen['authors'] ?? []), 
-    descripcion: informacionVolumen['description'], 
-    urlMiniatura: enlacesImagen['thumbnail'] ?? enlacesImagen['smallThumbnail'],  
-    fechaPublicacion: informacionVolumen['publishedDate'],  
-    numeroPaginas: informacionVolumen['pageCount'],  
-    categorias: List<String>.from(informacionVolumen['categories'] ?? []), 
-    calificacionPromedio: informacionVolumen['averageRating']?.toDouble(),  
-    numeroCalificaciones: informacionVolumen['ratingsCount'],  
-  );
-}
+    return Libro(
+      id: json['id'] ?? '',
+      titulo: informacionVolumen['title'] ?? 'Título no disponible',
+      autores: List<String>.from(informacionVolumen['authors'] ?? []),
+      descripcion: informacionVolumen['description'],
+      urlMiniatura: enlacesImagen['thumbnail'] ?? enlacesImagen['smallThumbnail'],
+      fechaPublicacion: informacionVolumen['publishedDate'],
+      numeroPaginas: informacionVolumen['pageCount'],
+      categorias: List<String>.from(informacionVolumen['categories'] ?? []),
+      calificacionPromedio: informacionVolumen['averageRating']?.toDouble(),
+      numeroCalificaciones: informacionVolumen['ratingsCount'],
+    );
+  }
+
+  Libro copyWith({
+    String? id,
+    String? titulo,
+    List<String>? autores,
+    String? descripcion,
+    String? urlMiniatura,
+    String? fechaPublicacion,
+    int? numeroPaginas,
+    List<String>? categorias,
+    double? calificacionPromedio,
+    int? numeroCalificaciones,
+    String? urlLectura,
+    bool? esAudiolibro,
+    String? urlVistaPrevia,
+  }) {
+    return Libro(
+      id: id ?? this.id,
+      titulo: titulo ?? this.titulo,
+      autores: autores ?? this.autores,
+      descripcion: descripcion ?? this.descripcion,
+      urlMiniatura: urlMiniatura ?? this.urlMiniatura,
+      fechaPublicacion: fechaPublicacion ?? this.fechaPublicacion,
+      numeroPaginas: numeroPaginas ?? this.numeroPaginas,
+      categorias: categorias ?? this.categorias,
+      calificacionPromedio: calificacionPromedio ?? this.calificacionPromedio,
+      numeroCalificaciones: numeroCalificaciones ?? this.numeroCalificaciones,
+      urlLectura: urlLectura ?? this.urlLectura,
+      esAudiolibro: esAudiolibro ?? this.esAudiolibro,
+      urlVistaPrevia: urlVistaPrevia ?? this.urlVistaPrevia,
+    );
+  }
 }
