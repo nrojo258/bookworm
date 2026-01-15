@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'componentes.dart';
 import 'modelos/progreso_lectura.dart';
 
@@ -23,7 +22,7 @@ class SincronizacionOffline {
   Future<bool> tieneConexion() async {
     try {
       final resultado = await _connectivity.checkConnectivity();
-      return resultado != ConnectivityResult.none;
+      return resultado.any((result) => result != ConnectivityResult.none);
     } catch (e) {
       print('Error verificando conexión: $e');
       return false;
@@ -224,7 +223,7 @@ class SincronizacionOffline {
   Future<void> _verificarConexionYSincronizar() async {
     try {
       _connectivity.onConnectivityChanged.listen((resultado) async {
-        if (resultado != ConnectivityResult.none) {
+        if (resultado.any((result) => result != ConnectivityResult.none)) {
           print('Conexión detectada, sincronizando...');
           await sincronizarDatosPendientes();
         }
@@ -445,12 +444,12 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
                         const SizedBox(height: 8),
                         if (_progresosPendientes > 0)
                           Text(
-                            '• ${_progresosPendientes} progresos de lectura',
+                            '• $_progresosPendientes progresos de lectura',
                             style: EstilosApp.cuerpoPequeno,
                           ),
                         if (_mensajesPendientes > 0)
                           Text(
-                            '• ${_mensajesPendientes} mensajes de club',
+                            '• $_mensajesPendientes mensajes de club',
                             style: EstilosApp.cuerpoPequeno,
                           ),
                         const SizedBox(height: 16),
@@ -464,7 +463,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
                         : null,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: _tieneConexion ? AppColores.primario : Colors.grey,
+                      backgroundColor: _tieneConexion ? AppColores.primario : const Color(0xFF9E9E9E),
                     ),
                     child: _estaSincronizando
                         ? const Row(
@@ -533,7 +532,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
               margin: const EdgeInsets.only(top: 20),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColores.primario.withOpacity(0.1),
+                color: AppColores.primario.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Column(

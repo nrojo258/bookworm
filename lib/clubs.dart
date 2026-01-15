@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'componentes.dart';
 import 'servicio/servicio_firestore.dart';
 
@@ -14,7 +14,6 @@ class _ClubsState extends State<Clubs> {
   final TextEditingController _controladorBusqueda = TextEditingController();
   final ServicioFirestore _servicioFirestore = ServicioFirestore();
   int _seccionSeleccionada = 0;
-  String? _generoSeleccionado;
   
   List<Map<String, dynamic>> _misClubs = [];
   List<Map<String, dynamic>> _clubsRecomendados = [];
@@ -135,22 +134,26 @@ class _ClubsState extends State<Clubs> {
         _seccionSeleccionada = 1;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Club "$nombre" creado exitosamente'),
-          backgroundColor: AppColores.secundario,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Club "$nombre" creado exitosamente'),
+            backgroundColor: AppColores.secundario,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error creando club: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creando club: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -161,21 +164,25 @@ class _ClubsState extends State<Clubs> {
       // Actualizar la lista de clubs
       await _cargarClubs();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Te has unido al club "$clubNombre"'),
-          backgroundColor: AppColores.secundario,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Te has unido al club "$clubNombre"'),
+            backgroundColor: AppColores.secundario,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error uniéndose al club: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uniéndose al club: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -203,7 +210,7 @@ class _ClubsState extends State<Clubs> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColores.primario.withOpacity(0.1),
+                  color: AppColores.primario.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -230,14 +237,14 @@ class _ClubsState extends State<Clubs> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.people, size: 16, color: Colors.grey),
+              const Icon(Icons.people, size: 16, color: Color(0xFF9E9E9E)),
               const SizedBox(width: 4),
               Text(
                 '${club['miembrosCount'] ?? 0} miembros',
                 style: EstilosApp.cuerpoPequeno,
               ),
               const SizedBox(width: 16),
-              Icon(Icons.person, size: 16, color: Colors.grey),
+              const Icon(Icons.person, size: 16, color: Color(0xFF9E9E9E)),
               const SizedBox(width: 4),
               Text(
                 club['creadorNombre'] ?? 'Usuario',
@@ -401,7 +408,7 @@ class _ClubsState extends State<Clubs> {
             style: EstilosApp.cuerpoMedio,
           ),
           const SizedBox(height: 20),
-          ..._clubsRecomendados.map(_construirTarjetaClub).toList(),
+          ..._clubsRecomendados.map(_construirTarjetaClub),
         ],
       ),
     );
@@ -441,7 +448,7 @@ class _ClubsState extends State<Clubs> {
             style: EstilosApp.cuerpoMedio,
           ),
           const SizedBox(height: 20),
-          ..._misClubs.map(_construirTarjetaClub).toList(),
+          ..._misClubs.map(_construirTarjetaClub),
         ],
       ),
     );

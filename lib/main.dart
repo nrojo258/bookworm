@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'autenticación.dart';
+import 'autenticacion.dart';
 import 'buscar.dart';
 import 'clubs.dart';
 import 'perfil.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'componentes.dart';
 import 'chat_clubs.dart';
 import 'graficos_estadisticas.dart';
@@ -31,15 +30,16 @@ class AppBookWorm extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColores.primario,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 74, 111, 165)),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColores.primario),
         scaffoldBackgroundColor: AppColores.fondo,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color.fromARGB(255, 74, 111, 165),
+          backgroundColor: AppColores.primario,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(style: EstilosApp.botonPrimario),
       ),
+      initialRoute: '/',
       routes: {
         '/': (context) => const Autenticacion(),
         '/home': (context) => const PaginaInicio(),
@@ -47,23 +47,43 @@ class AppBookWorm extends StatelessWidget {
         '/clubs': (context) => const Clubs(),
         '/perfil': (context) => const Perfil(),
         '/chat_club': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          return ChatClub(
-            clubId: args['clubId'],
-            clubNombre: args['clubNombre'],
-          );
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return ChatClub(
+              clubId: args['clubId'],
+              clubNombre: args['clubNombre'],
+              rolUsuario: args['rolUsuario'],
+            );
+          }
+          return const Scaffold(body: Center(child: Text('Error: Datos del club no encontrados')));
         },
         '/graficos': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          return GraficosEstadisticas(
-            datosEstadisticas: args['datosEstadisticas'],
-          );
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return GraficosEstadisticas(
+              datosEstadisticas: args['datosEstadisticas'],
+            );
+          }
+          return const Scaffold(body: Center(child: Text('Error: Datos de estadísticas no encontrados')));
         },
         '/sincronizacion': (context) => const PantallaSincronizacion(),
         '/public_domain': (context) => const PublicDomain(),
         '/detalles_libro': (context) {
-          final libro = ModalRoute.of(context)!.settings.arguments as Libro;
-          return DetallesLibro(libro: libro);
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Libro) {
+            return DetallesLibro(libroObjeto: args);
+          }
+          return const Scaffold(body: Center(child: Text('Error: Libro no encontrado')));
+        },
+        '/lector': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Lector')),
+              body: const Center(child: Text('El lector de libros estará disponible pronto')),
+            );
+          }
+          return const Scaffold(body: Center(child: Text('Error: Datos de lectura no encontrados')));
         },
       },
     );
@@ -98,7 +118,7 @@ class _PaginaInicioState extends State<PaginaInicio> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Container(
-              height: 180,
+              constraints: const BoxConstraints(minHeight: 180),
               decoration: EstilosApp.decoracionGradiente,
               padding: const EdgeInsets.all(24),
               child: Row(
@@ -194,13 +214,13 @@ class _PaginaInicioState extends State<PaginaInicio> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                accion['icono'],
+                                accion['icono'] as IconData,
                                 size: 32,
                                 color: AppColores.primario,
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                accion['etiqueta'],
+                                accion['etiqueta'] as String,
                                 style: EstilosApp.cuerpoPequeno,
                                 textAlign: TextAlign.center,
                               ),

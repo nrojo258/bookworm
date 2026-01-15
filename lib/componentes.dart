@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'API/modelos.dart';
 
 class BotonesBarraApp extends StatelessWidget {
@@ -42,7 +42,7 @@ class BotonesBarraApp extends StatelessWidget {
         },
         style: TextButton.styleFrom(
           foregroundColor: estaActivo ? Colors.white : Colors.white70,
-          backgroundColor: estaActivo ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          backgroundColor: estaActivo ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -95,7 +95,7 @@ class BotonSeccion extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: estaSeleccionado ? AppColores.primario : Colors.grey.shade300,
+            color: estaSeleccionado ? AppColores.primario : const Color(0xFFE0E0E0),
           ),
         ),
         elevation: 0,
@@ -136,11 +136,11 @@ class EstadoVacio extends StatelessWidget {
       child: Center(
         child: Column(
           children: [
-            Icon(icono, size: 48, color: Colors.grey),
+            Icon(icono, size: 48, color: const Color(0xFF9E9E9E)),
             const SizedBox(height: 16),
-            Text(titulo, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            Text(titulo, style: const TextStyle(fontSize: 16, color: Color(0xFF9E9E9E))),
             const SizedBox(height: 8),
-            Text(descripcion, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(descripcion, style: const TextStyle(fontSize: 14, color: Color(0xFF9E9E9E))),
           ],
         ),
       ),
@@ -170,7 +170,7 @@ class BarraBusquedaPersonalizada extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColores.fondo,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
             ),
             child: TextField(
               controller: controlador,
@@ -220,7 +220,7 @@ class FiltroDesplegable extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColores.fondo,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -277,7 +277,7 @@ class TarjetaLibro extends StatelessWidget {
       height: 120,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[200],
+        color: const Color(0xFFEEEEEE),
       ),
       child: libro.urlMiniatura != null
           ? ClipRRect(
@@ -296,11 +296,11 @@ class TarjetaLibro extends StatelessWidget {
                   );
                 },
                 errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.book, size: 40, color: Colors.grey);
+                  return const Icon(Icons.book, size: 40, color: Color(0xFF9E9E9E));
                 },
               ),
             )
-          : const Icon(Icons.book, size: 40, color: Colors.grey),
+          : const Icon(Icons.book, size: 40, color: Color(0xFF9E9E9E)),
     );
   }
 
@@ -385,14 +385,14 @@ class ElementoConfiguracion extends StatelessWidget {
     Widget content = Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
+        border: Border(bottom: BorderSide(color: const Color(0xFFE0E0E0), width: 1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColores.primario.withOpacity(0.1),
+              color: AppColores.primario.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icono, size: 20, color: AppColores.primario),
@@ -412,10 +412,10 @@ class ElementoConfiguracion extends StatelessWidget {
             Switch(
               value: valorSwitch,
               onChanged: alCambiarSwitch,
-              activeColor: AppColores.primario,
+              activeThumbColor: AppColores.primario,
             )
           else
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            const Icon(Icons.chevron_right, color: Color(0xFF9E9E9E)),
         ],
       ),
     );
@@ -471,11 +471,11 @@ class BotonAccionRapida extends StatelessWidget {
     return ElevatedButton(
       onPressed: alPresionar,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.2),
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
         ),
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

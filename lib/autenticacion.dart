@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'servicio/servicio_firestore.dart'; 
 import 'modelos/datos_usuario.dart'; 
 
@@ -196,11 +194,11 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
       controller: controlador,
       decoration: InputDecoration(
         labelText: etiqueta,
-        labelStyle: const TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Color(0xFF9E9E9E)),
         prefixIcon: Icon(icono, color: AppColores.primario),
         suffixIcon: alAlternarVisibilidad != null ? IconButton(
           icon: Icon(textoOculto ? Icons.visibility_off : Icons.visibility, 
-                     color: AppColores.primario.withOpacity(0.7)),
+                     color: AppColores.primario.withValues(alpha: 0.7)),
           onPressed: alAlternarVisibilidad,
         ) : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -210,10 +208,10 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.grey),
+          borderSide: const BorderSide(color: Color(0xFF9E9E9E)),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: const Color(0xFFFAFAFA),
         contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       ),
       obscureText: textoOculto,
@@ -250,7 +248,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 20,
                         spreadRadius: 2,
                         offset: const Offset(0, 10),
@@ -263,7 +261,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColores.primario.withOpacity(0.1),
+                          color: AppColores.primario.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColores.primario, width: 3),
                         ),
@@ -293,7 +291,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                             : 'Únete a nuestra comunidad de lectores',
                         style: const TextStyle(
                           fontSize: 16,
-                          color: Colors.grey,
+                          color: Color(0xFF9E9E9E),
                           height: 1.4,
                         ),
                         textAlign: TextAlign.center,
@@ -380,7 +378,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                             _esLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?',
                             style: const TextStyle(
                               fontSize: 15,
-                              color: Colors.grey,
+                              color: Color(0xFF9E9E9E),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -410,7 +408,7 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
                   'Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   textAlign: TextAlign.center,
                 ),

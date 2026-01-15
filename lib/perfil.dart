@@ -5,14 +5,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'componentes.dart';
 import 'servicio/servicio_firestore.dart';
 import 'modelos/datos_usuario.dart';
 import 'modelos/progreso_lectura.dart';
-import 'graficos_estadisticas.dart';
-import 'sincronizacion_offline.dart';
-import 'API/open_library.dart';
 import 'API/modelos.dart';
 
 class Perfil extends StatefulWidget {
@@ -38,6 +35,7 @@ class _PerfilState extends State<Perfil> {
   // Libros guardados
   List<Map<String, dynamic>> _librosGuardados = [];
   List<Map<String, dynamic>> _librosFavoritos = [];
+  List<Map<String, dynamic>> _todosLosLibrosUsuario = [];
   bool _cargandoLibros = false;
   
   // Progresos de lectura
@@ -47,7 +45,10 @@ class _PerfilState extends State<Perfil> {
   @override
   void initState() {
     super.initState();
+    _cargandoLibros = true;
+    _cargandoProgresos = true;
     _cargarDatosUsuario();
+    _escucharCambiosBiblioteca();
   }
 
   Future<void> _cargarDatosUsuario() async {
@@ -65,31 +66,24 @@ class _PerfilState extends State<Perfil> {
           _estaCargando = false;
         });
       }
-      
-      // Cargar libros guardados y progresos
-      await _cargarLibrosGuardados();
-      await _cargarProgresosLectura();
     } catch (e) {
       print('Error cargando datos del usuario: $e');
       if (mounted) setState(() => _estaCargando = false);
     }
   }
 
-  Future<void> _cargarLibrosGuardados() async {
-    if (!mounted) return;
-    
-    setState(() => _cargandoLibros = true);
-    try {
-      final usuario = _auth.currentUser;
-      if (usuario == null) return;
-      
-      final snapshot = await _firestore
-          .collection('usuarios')
-          .doc(usuario.uid)
-          .collection('libros_guardados')
-          .orderBy('fechaGuardado', descending: true)
-          .get();
-      
+  void _escucharCambiosBiblioteca() {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return;
+
+    // Listener para libros guardados
+    _firestore
+        .collection('usuarios')
+        .doc(usuario.uid)
+        .collection('libros_guardados')
+        .orderBy('fechaGuardado', descending: true)
+        .snapshots()
+        .listen((snapshot) {
       if (mounted) {
         final todosLosLibros = snapshot.docs.map((doc) {
           final data = doc.data();
@@ -98,33 +92,24 @@ class _PerfilState extends State<Perfil> {
         }).toList();
 
         setState(() {
+          _todosLosLibrosUsuario = todosLosLibros;
           _librosFavoritos = todosLosLibros.where((l) => l['favorito'] == true).toList();
-          _librosGuardados = todosLosLibros.where((l) => l['favorito'] != true).toList();
+          _librosGuardados = todosLosLibros.where((l) => l['favorito'] != true && (l['estado'] == 'guardado' || l['estado'] == 'leyendo' || l['estado'] == null)).toList();
+          _cargandoLibros = false;
         });
       }
-    } catch (e) {
-      print('Error cargando libros guardados: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _cargandoLibros = false);
-      }
-    }
-  }
+    }, onError: (error) {
+      print('Error escuchando libros guardados: $error');
+      if (mounted) setState(() => _cargandoLibros = false);
+    });
 
-  Future<void> _cargarProgresosLectura() async {
-    if (!mounted) return;
-    
-    setState(() => _cargandoProgresos = true);
-    try {
-      final usuario = _auth.currentUser;
-      if (usuario == null) return;
-      
-      final snapshot = await _firestore
-          .collection('progreso_lectura')
-          .where('usuarioId', isEqualTo: usuario.uid)
-          .orderBy('fechaInicio', descending: true)
-          .get();
-      
+    // Listener para progresos de lectura
+    _firestore
+        .collection('progreso_lectura')
+        .where('usuarioId', isEqualTo: usuario.uid)
+        .orderBy('fechaInicio', descending: true)
+        .snapshots()
+        .listen((snapshot) {
       if (mounted) {
         setState(() {
           _progresosLectura = snapshot.docs.map((doc) {
@@ -132,15 +117,13 @@ class _PerfilState extends State<Perfil> {
             data['id'] = doc.id;
             return ProgresoLectura.fromMap(data);
           }).toList();
+          _cargandoProgresos = false;
         });
       }
-    } catch (e) {
-      print('Error cargando progresos: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _cargandoProgresos = false);
-      }
-    }
+    }, onError: (error) {
+      print('Error escuchando progresos: $error');
+      if (mounted) setState(() => _cargandoProgresos = false);
+    });
   }
 
   Future<void> _seleccionarImagen() async {
@@ -247,7 +230,7 @@ class _PerfilState extends State<Perfil> {
                         children: [
                           CircleAvatar(
                             radius: 50,
-                            backgroundColor: AppColores.primario.withOpacity(0.1),
+                            backgroundColor: AppColores.primario.withValues(alpha: 0.1),
                             backgroundImage: _obtenerImagenPerfil(imagenTemp),
                             child: _obtenerIconoPerfil(imagenTemp),
                           ),
@@ -391,6 +374,56 @@ class _PerfilState extends State<Perfil> {
     }
   }
 
+  Future<void> _eliminarProgreso(String progresoId, String libroId) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quitar del progreso'),
+        content: const Text('¿Seguro que quieres quitar este libro de tu progreso? Se perderán las páginas leídas.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      final usuario = _auth.currentUser;
+      if (usuario == null) return;
+
+      await _firestore.collection('progreso_lectura').doc(progresoId).delete();
+
+      // Actualización optimista de la UI para reflejar el cambio inmediatamente.
+      if (mounted) {
+        setState(() {
+          _progresosLectura.removeWhere((progreso) => progreso.id == progresoId);
+        });
+      }
+
+      final libroGuardadoRef = _firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .collection('libros_guardados')
+          .doc(libroId);
+      final doc = await libroGuardadoRef.get();
+      if (doc.exists) {
+        await libroGuardadoRef.update({'estado': 'guardado'});
+      }
+      _mostrarExito('Libro quitado de tu progreso');
+    } catch (e) {
+      _mostrarError('Error al quitar el libro del progreso: $e');
+    }
+  }
+
   void _mostrarDialogoActualizarProgreso(ProgresoLectura progreso) {
     final paginaCtrl = TextEditingController(text: progreso.paginaActual.toString());
     final paginasTotalesCtrl = TextEditingController(text: progreso.paginasTotales.toString());
@@ -477,6 +510,10 @@ class _PerfilState extends State<Perfil> {
                   }
 
                   try {
+                    await _firestore.collection('progreso_lectura').doc(progreso.id).update({
+                      'paginasTotales': paginasTotales,
+                    });
+
                     await _servicioFirestore.actualizarEstadoLectura(
                       progresoId: progreso.id,
                       estado: estado,
@@ -503,11 +540,26 @@ class _PerfilState extends State<Perfil> {
                           .update({'estado': 'completado'});
                     }
 
-                    Navigator.pop(context);
-                    _mostrarExito('Progreso actualizado');
+                    if (mounted) {
+                      // Actualización optimista de la UI para reflejar los cambios inmediatamente
+                      setState(() {
+                        final index = _progresosLectura.indexWhere((p) => p.id == progreso.id);
+                        if (index != -1) {
+                          final datosActualizados = _progresosLectura[index].toMap();
+                          datosActualizados['id'] = progreso.id;
+                          datosActualizados['paginaActual'] = paginaActual;
+                          datosActualizados['paginasTotales'] = paginasTotales;
+                          datosActualizados['estado'] = estado;
+                          if (calificacion != null) datosActualizados['calificacion'] = calificacion;
+                          if (resenaCtrl.text.isNotEmpty) datosActualizados['resena'] = resenaCtrl.text;
+                          
+                          _progresosLectura[index] = ProgresoLectura.fromMap(datosActualizados);
+                        }
+                      });
 
-                    await _cargarProgresosLectura();
-                    await _cargarLibrosGuardados();
+                      Navigator.pop(context);
+                      _mostrarExito('Progreso actualizado');
+                    }
                   } catch (e) {
                     _mostrarError('Error actualizando progreso: $e');
                   }
@@ -607,6 +659,9 @@ class _PerfilState extends State<Perfil> {
       );
     }
 
+    // Calcular libros leídos directamente del progreso local
+    final int librosLeidos = _progresosLectura.where((p) => p.estado == 'completado').length;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: EstilosApp.tarjeta,
@@ -635,24 +690,6 @@ class _PerfilState extends State<Perfil> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _eliminarCuenta,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.delete, size: 16),
-                        SizedBox(width: 6),
-                        Text('Eliminar'),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -662,7 +699,7 @@ class _PerfilState extends State<Perfil> {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: AppColores.primario.withOpacity(0.1),
+                backgroundColor: AppColores.primario.withValues(alpha: 0.1),
                 backgroundImage: _datosUsuario?.urlImagenPerfil != null &&
                         _datosUsuario!.urlImagenPerfil!.isNotEmpty
                     ? NetworkImage(_datosUsuario!.urlImagenPerfil!)
@@ -685,7 +722,7 @@ class _PerfilState extends State<Perfil> {
                     Text(_datosUsuario?.correo ?? '', style: EstilosApp.cuerpoMedio),
                     const SizedBox(height: 8),
                     Text(
-                      '${_datosUsuario?.estadisticas?['librosLeidos'] ?? 0} libros leídos',
+                      '$librosLeidos libros leídos',
                       style: TextStyle(color: AppColores.secundario),
                     ),
                     if (_datosUsuario?.biografia != null && _datosUsuario!.biografia!.isNotEmpty)
@@ -877,10 +914,10 @@ class _PerfilState extends State<Perfil> {
                           width: 60,
                           height: 90,
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: const Color(0xFFEEEEEE),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                          child: const Icon(Icons.book, size: 30, color: Color(0xFF9E9E9E)),
                         );
                       },
                     ),
@@ -890,10 +927,10 @@ class _PerfilState extends State<Perfil> {
                     width: 60,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
+                      color: const Color(0xFFEEEEEE),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                    child: const Icon(Icons.book, size: 30, color: Color(0xFF9E9E9E)),
                   ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -963,7 +1000,7 @@ class _PerfilState extends State<Perfil> {
                       ),
                     IconButton(
                       icon: const Icon(Icons.play_arrow, size: 20, color: AppColores.primario),
-                      onPressed: libroMap['estado'] == 'guardado' 
+                      onPressed: (libroMap['estado'] == 'guardado' || libroMap['estado'] == 'leyendo' || libroMap['estado'] == null)
                         ? () => _iniciarProgresoLectura(libroMap)
                         : null,
                       tooltip: 'Comenzar a leer',
@@ -1052,10 +1089,10 @@ class _PerfilState extends State<Perfil> {
                                 width: 60,
                                 height: 90,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[200],
+                                  color: const Color(0xFFEEEEEE),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                                child: const Icon(Icons.book, size: 30, color: Color(0xFF9E9E9E)),
                               );
                             },
                           ),
@@ -1065,10 +1102,10 @@ class _PerfilState extends State<Perfil> {
                           width: 60,
                           height: 90,
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: const Color(0xFFEEEEEE),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.book, size: 30, color: Colors.grey),
+                          child: const Icon(Icons.book, size: 30, color: Color(0xFF9E9E9E)),
                         ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -1091,7 +1128,7 @@ class _PerfilState extends State<Perfil> {
                             const SizedBox(height: 8),
                             LinearProgressIndicator(
                               value: progreso.porcentajeProgreso / 100,
-                              backgroundColor: Colors.grey[200],
+                              backgroundColor: const Color(0xFFEEEEEE),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 progreso.estado == 'completado' 
                                   ? AppColores.secundario 
@@ -1130,18 +1167,44 @@ class _PerfilState extends State<Perfil> {
                           child: const Text('Actualizar Progreso'),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _eliminarProgreso(progreso.id, progreso.libroId),
+                        tooltip: 'Quitar del progreso',
+                      ),
                     ],
                   ),
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 
   Widget _construirSeccionEstadisticas() {
+    // Calcular estadísticas en tiempo real basadas en el progreso local
+    final int librosLeidos = _progresosLectura.where((p) => p.estado == 'completado').length;
+    final int paginasLeidas = _progresosLectura.fold(0, (sum, p) => sum + p.paginaActual);
+
+    // Calcular géneros desde el progreso local y biblioteca
+    final Map<String, int> conteoGeneros = {};
+    // Usamos _todosLosLibrosUsuario para incluir favoritos, guardados, leyendo y completados
+    int totalCategorias = 0;
+    
+    for (final libro in _todosLosLibrosUsuario) {
+      if (libro['categorias'] != null) {
+        final categorias = List<dynamic>.from(libro['categorias']);
+        for (final c in categorias) {
+          final categoria = c.toString();
+          conteoGeneros[categoria] = (conteoGeneros[categoria] ?? 0) + 1;
+          totalCategorias++;
+        }
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: EstilosApp.tarjeta,
@@ -1157,30 +1220,77 @@ class _PerfilState extends State<Perfil> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _construirEstadisticaItem(
-                valor: '${_datosUsuario?.estadisticas?['librosLeidos'] ?? 0}',
+                valor: '$librosLeidos',
                 titulo: 'Libros leídos',
                 icono: Icons.book,
               ),
               _construirEstadisticaItem(
-                valor: '${_datosUsuario?.estadisticas?['paginasTotales'] ?? 0}',
+                valor: '$paginasLeidas',
                 titulo: 'Páginas totales',
                 icono: Icons.article,
               ),
               _construirEstadisticaItem(
-                valor: '${_datosUsuario?.estadisticas?['rachaActual'] ?? 0}',
+                valor: '${_datosUsuario?.estadisticas['rachaActual'] ?? 0}',
                 titulo: 'Días racha',
                 icono: Icons.trending_up,
               ),
             ],
           ),
+
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
+              // Crear un mapa de estadísticas actualizado para pasar a los gráficos
+              final estadisticasActualizadas = Map<String, dynamic>.from(_datosUsuario?.estadisticas ?? {});
+              estadisticasActualizadas['librosLeidos'] = librosLeidos;
+              estadisticasActualizadas['paginasTotales'] = paginasLeidas;
+              estadisticasActualizadas['generos'] = conteoGeneros;
+              estadisticasActualizadas['objetivoMensual'] = _datosUsuario?.preferencias['libros_por_mes'] ?? 1;
+              estadisticasActualizadas['librosEnProgreso'] = _progresosLectura.where((p) => p.estado == 'leyendo').length;
+
+              // Calcular libros por mes (últimos 6 meses)
+              final Map<String, int> librosPorMes = {};
+              final now = DateTime.now();
+              final meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+              
+              for (int i = 5; i >= 0; i--) {
+                final mesDate = DateTime(now.year, now.month - i, 1);
+                librosPorMes[meses[mesDate.month - 1]] = 0;
+              }
+
+              for (final progreso in _progresosLectura) {
+                if (progreso.estado == 'completado') {
+                  // Intentar obtener fechaCompletado del mapa si no es accesible directamente
+                  final map = progreso.toMap();
+                  final fechaRaw = map['fechaCompletado'];
+                  DateTime? fecha;
+                  if (fechaRaw is Timestamp) fecha = fechaRaw.toDate();
+                  else if (fechaRaw is String) fecha = DateTime.tryParse(fechaRaw);
+                  else if (fechaRaw is DateTime) fecha = fechaRaw;
+                  
+                  if (fecha != null && now.difference(fecha).inDays < 200) {
+                    final key = meses[fecha.month - 1];
+                    if (librosPorMes.containsKey(key)) {
+                      librosPorMes[key] = (librosPorMes[key] ?? 0) + 1;
+                    }
+                  }
+                }
+              }
+              estadisticasActualizadas['librosPorMes'] = librosPorMes;
+
+              // Calcular distribución de progreso
+              estadisticasActualizadas['progreso'] = {
+                'Leyendo': _progresosLectura.where((p) => p.estado == 'leyendo').length,
+                'Completado': _progresosLectura.where((p) => p.estado == 'completado').length,
+                'Por Leer': _librosGuardados.where((l) => l['estado'] == 'guardado').length,
+              };
+
               Navigator.pushNamed(
                 context,
                 '/graficos',
                 arguments: {
-                  'datosEstadisticas': _datosUsuario?.estadisticas ?? {},
+                  'datosEstadisticas': estadisticasActualizadas,
+                  'tipoGraficoGeneros': 'circular',
                 },
               );
             },
@@ -1209,9 +1319,9 @@ class _PerfilState extends State<Perfil> {
           const SizedBox(height: 16),
           ElementoConfiguracion(
             titulo: 'Géneros Favoritos',
-            subtitulo: _datosUsuario?.generosFavoritos?.isNotEmpty == true
-                ? _datosUsuario!.generosFavoritos!.join(', ')
-                : 'No especificados',
+            subtitulo: _datosUsuario?.generosFavoritos.isNotEmpty == true
+                ? _datosUsuario!.generosFavoritos.join(', ')
+                : 'Ej: Ficción, Misterio, Terror...',
             icono: Icons.category,
             alPresionar: () => _mostrarDialogoGenerosFavoritos(),
           ),
@@ -1220,7 +1330,7 @@ class _PerfilState extends State<Perfil> {
             subtitulo: 'Recibir recordatorios de lectura',
             icono: Icons.notifications,
             tieneSwitch: true,
-            valorSwitch: _datosUsuario?.preferencias?['notificaciones'] ?? true,
+            valorSwitch: _datosUsuario?.preferencias['notificaciones'] ?? true,
             alCambiarSwitch: (valor) async {
               if (_datosUsuario != null) {
                 await _servicioFirestore.actualizarDatosUsuario(
@@ -1233,7 +1343,7 @@ class _PerfilState extends State<Perfil> {
           ),
           ElementoConfiguracion(
             titulo: 'Objetivo Mensual',
-            subtitulo: '${_datosUsuario?.preferencias?['libros_por_mes'] ?? 1} libros por mes',
+            subtitulo: '${_datosUsuario?.preferencias['libros_por_mes'] ?? 1} libros por mes',
             icono: Icons.flag,
             alPresionar: () => _mostrarDialogoObjetivoMensual(),
           ),
@@ -1272,6 +1382,18 @@ class _PerfilState extends State<Perfil> {
             icono: Icons.help,
             alPresionar: () => _mostrarDialogoAyuda(),
           ),
+          ElementoConfiguracion(
+            titulo: 'Cerrar sesión',
+            subtitulo: 'Salir de tu cuenta actual',
+            icono: Icons.logout,
+            alPresionar: _cerrarSesion,
+          ),
+          ElementoConfiguracion(
+            titulo: 'Eliminar cuenta',
+            subtitulo: 'Acción irreversible',
+            icono: Icons.delete_forever,
+            alPresionar: _eliminarCuenta,
+          ),
         ],
       ),
     );
@@ -1282,36 +1404,52 @@ class _PerfilState extends State<Perfil> {
       final usuario = _auth.currentUser;
       if (usuario == null) return;
 
+      final libroId = libro['libroId'];
+      if (libroId == null) {
+        _mostrarError('ID de libro no válido');
+        return;
+      }
+
+      final progresoExistenteQuery = await _firestore
+          .collection('progreso_lectura')
+          .where('usuarioId', isEqualTo: usuario.uid)
+          .where('libroId', isEqualTo: libroId)
+          .limit(1)
+          .get();
+
+      if (progresoExistenteQuery.docs.isNotEmpty) {
+        _mostrarExito('Ya tienes este libro en progreso.');
+        final data = progresoExistenteQuery.docs.first.data();
+        data['id'] = progresoExistenteQuery.docs.first.id;
+        final progreso = ProgresoLectura.fromMap(data);
+        _mostrarDialogoActualizarProgreso(progreso);
+        return;
+      }
+
       final progresoId = _firestore.collection('progreso_lectura').doc().id;
       
-      await _firestore
-          .collection('progreso_lectura')
-          .doc(progresoId)
-          .set({
-            'id': progresoId,
-            'usuarioId': usuario.uid,
-            'libroId': libro['libroId'],
-            'tituloLibro': libro['titulo'],
-            'autoresLibro': libro['autores'] ?? [],
-            'miniaturaLibro': libro['urlMiniatura'],
-            'estado': 'leyendo',
-            'paginaActual': 0,
-            'paginasTotales': libro['numeroPaginas'] ?? 0,
-            'fechaInicio': FieldValue.serverTimestamp(),
-            'calificacion': 0.0,
-          });
+      await _firestore.collection('progreso_lectura').doc(progresoId).set({
+        'id': progresoId,
+        'usuarioId': usuario.uid,
+        'libroId': libroId,
+        'tituloLibro': libro['titulo'],
+        'autoresLibro': libro['autores'] ?? [],
+        'miniaturaLibro': libro['urlMiniatura'],
+        'estado': 'leyendo',
+        'paginaActual': 0,
+        'paginasTotales': libro['numeroPaginas'] ?? 0,
+        'fechaInicio': FieldValue.serverTimestamp(),
+        'calificacion': 0.0,
+      });
 
       await _firestore
           .collection('usuarios')
           .doc(usuario.uid)
           .collection('libros_guardados')
-          .doc(libro['libroId'])
+          .doc(libroId)
           .update({'estado': 'leyendo'});
 
       _mostrarExito('Progreso iniciado para "${libro['titulo']}"');
-      
-      await _cargarProgresosLectura();
-      await _cargarLibrosGuardados();
     } catch (e) {
       _mostrarError('Error al iniciar progreso: $e');
     }
@@ -1329,8 +1467,6 @@ class _PerfilState extends State<Perfil> {
           .doc(libroId)
           .delete();
 
-      await _cargarLibrosGuardados();
-      
       _mostrarExito('Libro eliminado de tu biblioteca');
     } catch (e) {
       _mostrarError('Error eliminando libro: $e');
@@ -1344,7 +1480,7 @@ class _PerfilState extends State<Perfil> {
       case 'completado':
         return AppColores.secundario;
       default:
-        return Colors.grey;
+        return const Color(0xFF9E9E9E);
     }
   }
 
@@ -1374,7 +1510,7 @@ class _PerfilState extends State<Perfil> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(titulo, style: EstilosApp.cuerpoPequeno.copyWith(color: Colors.grey)),
+              Text(titulo, style: EstilosApp.cuerpoPequeno.copyWith(color: const Color(0xFF9E9E9E))),
               const SizedBox(height: 4),
               Text(valor, style: EstilosApp.cuerpoMedio),
             ],
@@ -1446,6 +1582,15 @@ class _PerfilState extends State<Perfil> {
             ),
             actions: [
               TextButton(
+                onPressed: () {
+                  setStateDialog(() {
+                    generosSeleccionados.clear();
+                  });
+                },
+                child: const Text('Limpiar'),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+              ),
+              TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancelar'),
               ),
@@ -1458,7 +1603,7 @@ class _PerfilState extends State<Perfil> {
                     );
                     await _cargarDatosUsuario();
                   }
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                 },
                 child: const Text('Guardar'),
               ),
@@ -1470,7 +1615,7 @@ class _PerfilState extends State<Perfil> {
   }
 
   void _mostrarDialogoObjetivoMensual() {
-    int objetivoActual = _datosUsuario?.preferencias?['libros_por_mes'] ?? 1;
+    int objetivoActual = _datosUsuario?.preferencias['libros_por_mes'] ?? 1;
     final objetivoCtrl = TextEditingController(text: objetivoActual.toString());
     
     showDialog(
@@ -1507,7 +1652,7 @@ class _PerfilState extends State<Perfil> {
                 );
                 await _cargarDatosUsuario();
               }
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Guardar'),
           ),
@@ -1638,21 +1783,6 @@ class _PerfilState extends State<Perfil> {
             const SizedBox(height: 20),
             _construirContenidoSeccion(),
             const SizedBox(height: 40),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _cerrarSesion,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Cerrar sesión'),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

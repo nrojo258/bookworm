@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'diseño.dart';
+import 'diseno.dart';
 import 'componentes.dart';
 import 'servicio/servicio_firestore.dart'; 
 
@@ -154,21 +154,25 @@ class _ChatClubState extends State<ChatClub> {
                   };
                 });
 
-                Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Información del club actualizada'),
-                    backgroundColor: AppColores.secundario,
-                  ),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Información del club actualizada'),
+                      backgroundColor: AppColores.secundario,
+                    ),
+                  );
+                }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error actualizando: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error actualizando: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             style: EstilosApp.botonPrimario,
@@ -231,7 +235,7 @@ class _ChatClubState extends State<ChatClub> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColores.primario.withOpacity(0.1),
+                color: AppColores.primario.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -262,7 +266,7 @@ class _ChatClubState extends State<ChatClub> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: esMio ? AppColores.primario : Colors.grey.shade100,
+                    color: esMio ? AppColores.primario : const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -279,7 +283,7 @@ class _ChatClubState extends State<ChatClub> {
                     _formatearFecha(datos['timestamp'].toDate()),
                     style: const TextStyle(
                       fontSize: 10,
-                      color: Colors.grey,
+                      color: Color(0xFF9E9E9E),
                     ),
                   ),
               ],
@@ -379,7 +383,7 @@ class _ChatClubState extends State<ChatClub> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              border: Border(top: BorderSide(color: const Color(0xFFE0E0E0))),
             ),
             child: Row(
               children: [
