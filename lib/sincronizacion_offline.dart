@@ -386,12 +386,13 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
         title: const Text('Sincronización'),
         backgroundColor: AppColores.primario,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        actions: const [BotonesBarraApp(rutaActual: '/perfil')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Estado de conexión
             Container(
               padding: const EdgeInsets.all(24),
               decoration: EstilosApp.tarjeta,

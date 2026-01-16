@@ -51,6 +51,15 @@ class _PerfilState extends State<Perfil> {
     _escucharCambiosBiblioteca();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic> && args.containsKey('seccionIndex')) {
+      _seccionSeleccionada = args['seccionIndex'];
+    }
+  }
+
   Future<void> _cargarDatosUsuario() async {
     final usuario = _auth.currentUser;
     if (usuario == null) {
@@ -999,15 +1008,6 @@ class _PerfilState extends State<Perfil> {
                         padding: const EdgeInsets.all(4),
                       ),
                     IconButton(
-                      icon: const Icon(Icons.play_arrow, size: 20, color: AppColores.primario),
-                      onPressed: (libroMap['estado'] == 'guardado' || libroMap['estado'] == 'leyendo' || libroMap['estado'] == null)
-                        ? () => _iniciarProgresoLectura(libroMap)
-                        : null,
-                      tooltip: 'Comenzar a leer',
-                      constraints: const BoxConstraints(),
-                      padding: const EdgeInsets.all(4),
-                    ),
-                    IconButton(
                       icon: const Icon(Icons.delete, size: 20, color: Colors.red),
                       onPressed: () => _eliminarLibroGuardado(libroMap['libroId']),
                       tooltip: 'Eliminar',
@@ -1074,8 +1074,40 @@ class _PerfilState extends State<Perfil> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
+                  GestureDetector(
+                    onTap: () {
+                      final libroMap = _todosLosLibrosUsuario.firstWhere(
+                        (l) => l['libroId'] == progreso.libroId || l['id'] == progreso.libroId,
+                        orElse: () => {},
+                      );
+
+                      Libro libro;
+                      if (libroMap.isNotEmpty) {
+                        libro = Libro(
+                          id: libroMap['libroId'] ?? '',
+                          titulo: libroMap['titulo'] ?? 'Sin título',
+                          autores: List<String>.from(libroMap['autores'] ?? []),
+                          descripcion: libroMap['descripcion'],
+                          urlMiniatura: libroMap['urlMiniatura'],
+                          fechaPublicacion: libroMap['fechaPublicacion'],
+                          numeroPaginas: libroMap['numeroPaginas'],
+                          categorias: List<String>.from(libroMap['categorias'] ?? []),
+                          urlLectura: libroMap['urlLectura'],
+                          esAudiolibro: libroMap['esAudiolibro'] ?? false,
+                        );
+                      } else {
+                        libro = Libro(
+                          id: progreso.libroId,
+                          titulo: progreso.tituloLibro,
+                          autores: progreso.autoresLibro,
+                          urlMiniatura: progreso.miniaturaLibro,
+                          numeroPaginas: progreso.paginasTotales,
+                        );
+                      }
+                      _mostrarDetallesLibro(libro);
+                    },
+                    child: Row(
+                      children: [
                       if (progreso.miniaturaLibro != null && progreso.miniaturaLibro!.isNotEmpty)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
@@ -1153,6 +1185,7 @@ class _PerfilState extends State<Perfil> {
                         ),
                       ),
                     ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -1662,26 +1695,71 @@ class _PerfilState extends State<Perfil> {
   }
 
   void _mostrarDialogoPrivacidad() {
+    bool perfilPublico = _datosUsuario?.preferencias['perfil_publico'] ?? true;
+    bool actividadPublica = _datosUsuario?.preferencias['actividad_publica'] ?? true;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Privacidad'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Configura quién puede ver tu perfil y actividad:\n\n'
-            '• Perfil público: Todos pueden ver tu perfil\n'
-            '• Perfil privado: Solo tus amigos pueden ver tu perfil\n'
-            '• Actividad pública: Todos pueden ver tu actividad\n'
-            '• Actividad privada: Solo tú puedes ver tu actividad\n\n'
-            'Para cambiar estas configuraciones, contacta al soporte técnico.',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Privacidad'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Controla quién puede ver tu información y actividad en la aplicación.',
+                  style: EstilosApp.cuerpoMedio,
+                ),
+                const SizedBox(height: 20),
+                SwitchListTile(
+                  title: Text(perfilPublico ? 'Perfil Público' : 'Perfil Privado'),
+                  subtitle: Text(perfilPublico 
+                      ? 'Todos pueden ver tu perfil' 
+                      : 'Solo tú puedes ver tu perfil'),
+                  value: perfilPublico,
+                  activeColor: AppColores.primario,
+                  onChanged: (val) => setStateDialog(() => perfilPublico = val),
+                ),
+                SwitchListTile(
+                  title: Text(actividadPublica ? 'Actividad Pública' : 'Actividad Privada'),
+                  subtitle: Text(actividadPublica 
+                      ? 'Tu progreso es visible en clubs' 
+                      : 'Tu progreso es privado'),
+                  value: actividadPublica,
+                  activeColor: AppColores.primario,
+                  onChanged: (val) => setStateDialog(() => actividadPublica = val),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_datosUsuario != null) {
+                  await _servicioFirestore.actualizarDatosUsuario(
+                    _datosUsuario!.uid,
+                    {
+                      'preferencias.perfil_publico': perfilPublico,
+                      'preferencias.actividad_publica': actividadPublica,
+                    },
+                  );
+                  await _cargarDatosUsuario();
+                }
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _mostrarExito('Configuración de privacidad guardada');
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColores.primario),
+              child: const Text('Guardar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
       ),
     );
   }

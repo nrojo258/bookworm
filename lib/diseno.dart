@@ -220,9 +220,6 @@ class DatosApp {
     {'etiqueta': 'Historial', 'icono': Icons.history},
     {'etiqueta': 'Libros Recomendados', 'icono': Icons.star},
     {'etiqueta': 'Desafíos', 'icono': Icons.emoji_events},
-    {'etiqueta': 'Buscar', 'icono': Icons.search},
-    {'etiqueta': 'Clubs', 'icono': Icons.group},
-    {'etiqueta': 'Configuración', 'icono': Icons.settings},
   ];
 
   static final List<Map<String, dynamic>> seccionesPerfil = [

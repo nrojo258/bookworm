@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'diseno.dart';
 import 'componentes.dart';
 import 'API/modelos.dart';
-import 'API/gutendex_service.dart';
+import 'API/biblioteca_service.dart';
 
 class PublicDomain extends StatefulWidget {
   const PublicDomain({super.key});
@@ -14,30 +14,118 @@ class PublicDomain extends StatefulWidget {
 }
 
 class _PublicDomainState extends State<PublicDomain> {
-  final GutendexService _servicioGutendex = GutendexService();
+  final BibliotecaServiceUnificado _servicioBiblioteca = BibliotecaServiceUnificado(apiKey: 'AIzaSyDGyQmEOJsYJfoOMYbr5DIns3adtE13jFM');
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   List<Libro> _libros = [];
   bool _estaCargando = true;
+  String _tipoRecomendacion = 'Populares';
 
   @override
   void initState() {
     super.initState();
-    _cargarLibrosPopulares();
+    _cargarRecomendaciones();
+  }
+
+  Future<void> _cargarRecomendaciones() async {
+    setState(() => _estaCargando = true);
+    try {
+      final usuario = _auth.currentUser;
+      List<Libro> librosRecomendados = [];
+      Set<String> generosParaBuscar = {};
+
+      if (usuario != null) {
+        // 1. Obtener géneros favoritos
+        final docUsuario = await _firestore.collection('usuarios').doc(usuario.uid).get();
+        final datosUsuario = docUsuario.data();
+        
+        if (datosUsuario != null && datosUsuario['generosFavoritos'] != null) {
+          final favoritos = List<String>.from(datosUsuario['generosFavoritos']);
+          generosParaBuscar.addAll(favoritos);
+        }
+
+        // 2. Obtener géneros del historial (últimos 20 libros)
+        final historialSnapshot = await _firestore
+            .collection('usuarios')
+            .doc(usuario.uid)
+            .collection('historial')
+            .orderBy('fechaVisto', descending: true)
+            .limit(20)
+            .get();
+
+        for (var doc in historialSnapshot.docs) {
+          final data = doc.data();
+          if (data['categorias'] != null) {
+            final cats = List<String>.from(data['categorias']);
+            generosParaBuscar.addAll(cats);
+          }
+        }
+      }
+
+      // Filtrar géneros
+      final generosLista = generosParaBuscar
+          .where((g) => g.isNotEmpty && g != 'Todos los géneros')
+          .toList();
+
+      if (generosLista.isNotEmpty) {
+        _tipoRecomendacion = 'Basado en tus gustos';
+        generosLista.shuffle();
+        final generosTop = generosLista.take(3).toList();
+
+        for (var genero in generosTop) {
+          String termino = _traducirGenero(genero);
+          final resultados = await _servicioBiblioteca.buscarLibros(termino, genero: termino, limite: 10);
+          librosRecomendados.addAll(resultados);
+        }
+        
+        final ids = <String>{};
+        librosRecomendados.retainWhere((x) => ids.add(x.id));
+        librosRecomendados.shuffle();
+      }
+
+      if (librosRecomendados.isEmpty) {
+        _tipoRecomendacion = 'Populares';
+        librosRecomendados = await _servicioBiblioteca.obtenerLibrosPopulares(limite: 30);
+      }
+
+      if (mounted) setState(() => _libros = librosRecomendados);
+    } catch (e) {
+      _mostrarError('Error al cargar recomendaciones: $e');
+      _cargarLibrosPopulares();
+    } finally {
+      if (mounted) setState(() => _estaCargando = false);
+    }
+  }
+
+  String _traducirGenero(String genero) {
+    final map = {
+      'Ficción': 'Fiction',
+      'Ciencia Ficción': 'Science Fiction',
+      'Fantasía': 'Fantasy',
+      'Misterio': 'Mystery',
+      'Terror': 'Horror',
+      'Romance': 'Romance',
+      'Historia': 'History',
+      'Biografía': 'Biography',
+      'Aventura': 'Adventure',
+      'Poesía': 'Poetry',
+      'Infantil': 'Children',
+      'Juvenil': 'Young Adult',
+    };
+    return map[genero] ?? genero;
   }
 
   Future<void> _cargarLibrosPopulares() async {
-    setState(() => _estaCargando = true);
+    if (!mounted) return;
     try {
-      final resultados = await _servicioGutendex.obtenerLibrosPopulares(limite: 30);
+      final resultados = await _servicioBiblioteca.obtenerLibrosPopulares(limite: 30);
       setState(() {
         _libros = resultados;
+        _tipoRecomendacion = 'Populares';
       });
     } catch (e) {
       _mostrarError('Error al cargar libros: $e');
-    } finally {
-      setState(() => _estaCargando = false);
     }
   }
 
@@ -93,13 +181,27 @@ class _PublicDomainState extends State<PublicDomain> {
       ),
       body: _estaCargando 
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _libros.length,
-              itemBuilder: (context, index) {
-                final libro = _libros[index];
-                return _construirTarjetaLibro(libro);
-              },
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    _tipoRecomendacion,
+                    style: EstilosApp.tituloMedio,
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _libros.length,
+                    itemBuilder: (context, index) {
+                      final libro = _libros[index];
+                      return _construirTarjetaLibro(libro);
+                    },
+                  ),
+                ),
+              ],
             ),
     );
   }

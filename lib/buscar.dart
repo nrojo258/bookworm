@@ -481,7 +481,27 @@ class _BuscarState extends State<Buscar> {
     );
   }
 
+  Future<void> _guardarEnHistorial(Libro libro) async {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return;
+
+    try {
+      final datosLibro = libro.toMap();
+      datosLibro['fechaVisto'] = FieldValue.serverTimestamp();
+      
+      await _firestore
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .collection('historial')
+          .doc(libro.id)
+          .set(datosLibro);
+    } catch (e) {
+      print('Error al guardar en historial: $e');
+    }
+  }
+
   void _mostrarDetallesLibro(Libro libro) {
+    _guardarEnHistorial(libro);
     Navigator.pushNamed(
       context,
       '/detalles_libro',

@@ -331,6 +331,8 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
         title: const Text('Estadísticas Detalladas'),
         backgroundColor: AppColores.primario,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        actions: const [BotonesBarraApp(rutaActual: '/perfil')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

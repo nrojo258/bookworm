@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'diseno.dart';
 import 'API/modelos.dart';
-import 'API/progreso_backend.dart';
 import 'modelos/progreso_lectura.dart';
 
 class DetallesLibro extends StatefulWidget {
@@ -20,7 +19,6 @@ class DetallesLibro extends StatefulWidget {
 class _DetallesLibroState extends State<DetallesLibro> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ProgresoBackend _progresoBackend = ProgresoBackend();
   bool _estaCargando = false;
   bool _esFavorito = false;
   bool _estaGuardado = false;
@@ -700,13 +698,28 @@ class _DetallesLibroState extends State<DetallesLibro> {
 
       ProgresoLectura? progreso;
       if (progresoExistenteQuery.docs.isEmpty) {
-        progreso = await _progresoBackend.crearProgreso(
-          libroId: widget.libroObjeto.id,
-          tituloLibro: widget.libroObjeto.titulo,
-          autoresLibro: widget.libroObjeto.autores,
-          miniaturaLibro: widget.libroObjeto.urlMiniatura,
-          paginasTotales: widget.libroObjeto.numeroPaginas ?? 0,
-        );
+        final nuevoProgresoId = _firestore.collection('progreso_lectura').doc().id;
+        final nuevoProgresoData = {
+          'id': nuevoProgresoId,
+          'usuarioId': usuario.uid,
+          'libroId': widget.libroObjeto.id,
+          'tituloLibro': widget.libroObjeto.titulo,
+          'autoresLibro': widget.libroObjeto.autores,
+          'miniaturaLibro': widget.libroObjeto.urlMiniatura,
+          'estado': 'leyendo',
+          'paginaActual': 0,
+          'paginasTotales': widget.libroObjeto.numeroPaginas ?? 0,
+          'fechaInicio': FieldValue.serverTimestamp(),
+          'calificacion': 0.0,
+        };
+
+        await _firestore.collection('progreso_lectura').doc(nuevoProgresoId).set(nuevoProgresoData);
+        
+        // Crear objeto local para pasar a la siguiente pantalla sin esperar recarga
+        final mapLocal = Map<String, dynamic>.from(nuevoProgresoData);
+        mapLocal['fechaInicio'] = Timestamp.now();
+        progreso = ProgresoLectura.fromMap(mapLocal);
+
         _mostrarExito('Comenzaste a leer "${widget.libroObjeto.titulo}"');
       } else {
         final data = progresoExistenteQuery.docs.first.data();
@@ -717,13 +730,17 @@ class _DetallesLibroState extends State<DetallesLibro> {
 
       // 3. Actualizar estado local y navegar
       setState(() { _estaGuardado = true; });
+      
+      if (widget.libroObjeto.urlLectura != null) {
+        _abrirURLEnApp(widget.libroObjeto.urlLectura!);
+      }
+      
       if (mounted) {
         Navigator.pushNamed(
           context,
-          '/lector',
+          '/perfil',
           arguments: {
-            'libro': widget.libroObjeto,
-            'progreso': progreso,
+            'seccionIndex': 1,
           },
         );
       }
@@ -1019,9 +1036,7 @@ class _DetallesLibroState extends State<DetallesLibro> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      _abrirURLEnApp(widget.libroObjeto.urlLectura!);
-                    },
+                    onPressed: _estaCargando ? null : _iniciarLectura,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
