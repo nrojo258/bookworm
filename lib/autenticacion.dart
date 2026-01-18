@@ -113,6 +113,8 @@ class _EstadoPantallaAuth extends State<Autenticacion> {
     );
 
     if (credencialUsuario.user != null) {
+      await credencialUsuario.user!.updateDisplayName(_controladorNombre.text.trim());
+
       final datosUsuario = DatosUsuario(
         uid: credencialUsuario.user!.uid,
         nombre: _controladorNombre.text.trim(),

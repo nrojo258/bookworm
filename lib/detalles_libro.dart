@@ -66,7 +66,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
     setState(() => _cargandoOfertas = true);
     
     try {
-      // Buscar por ISBN primero
       if (widget.libroObjeto.isbn != null) {
         final ofertasISBN = await _buscarPorISBN(widget.libroObjeto.isbn!);
         if (ofertasISBN.isNotEmpty) {
@@ -75,7 +74,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
         }
       }
       
-      // Buscar por título y autor como fallback
       final query = '${widget.libroObjeto.titulo} ${widget.libroObjeto.autores.isNotEmpty ? widget.libroObjeto.autores.first : ''}';
       final ofertasTitulo = await _buscarPorTitulo(query);
       if (ofertasTitulo.isNotEmpty) {
@@ -92,7 +90,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
     final List<OfertaTienda> ofertas = [];
     
     try {
-      // 1. Google Books API para precios
       final googleUrl = Uri.parse('https://www.googleapis.com/books/v1/volumes?q=isbn:$isbn');
       final googleResponse = await http.get(googleUrl);
       
@@ -119,7 +116,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
     }
     
     try {
-      // 2. Open Library para libros gratis
       final openLibUrl = Uri.parse('https://openlibrary.org/api/books?bibkeys=ISBN:$isbn&format=json&jscmd=data');
       final openLibResponse = await http.get(openLibUrl);
       
@@ -146,7 +142,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
     final List<OfertaTienda> ofertas = [];
     
     try {
-      // Google Books como fallback
       final googleUrl = Uri.parse('https://www.googleapis.com/books/v1/volumes?q=${Uri.encodeComponent(query)}&maxResults=5');
       final googleResponse = await http.get(googleUrl);
       
@@ -164,7 +159,7 @@ class _DetallesLibroState extends State<DetallesLibro> {
                   moneda: saleInfo['listPrice']?['currencyCode'] ?? 'EUR',
                   url: saleInfo['buyLink'],
                 ));
-                break; // Solo el primero
+                break;
               }
             }
           }
@@ -231,7 +226,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
             ),
             const SizedBox(height: 20),
             
-            // Opción 1: Leer online gratis (si está disponible)
             if (widget.libroObjeto.urlLectura != null && esGratuito)
               ListTile(
                 leading: const Icon(Icons.public, color: Colors.green, size: 28),
@@ -244,7 +238,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
                 },
               ),
             
-            // Opción 2: Comprar en tiendas (si tiene precio)
             if (widget.libroObjeto.precio != null && widget.libroObjeto.precio! > 0)
               ListTile(
                 leading: const Icon(Icons.shopping_cart, color: AppColores.secundario, size: 28),
@@ -257,7 +250,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
                 },
               ),
             
-            // Opción 3: Audiolibro específico (si es audiolibro)
             if (esAudiolibro)
               ListTile(
                 leading: const Icon(Icons.headset, color: Color(0xFFF7991C), size: 28),
@@ -270,7 +262,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
                 },
               ),
             
-            // Opción 4: Tiendas de búsqueda (fallback)
             ListTile(
               leading: const Icon(Icons.store, color: Colors.blue, size: 28),
               title: Text(esAudiolibro ? 'Buscar audiolibro' : 'Buscar en tiendas'),
@@ -448,21 +439,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
             ],
             
             if (widget.libroObjeto.esAudiolibro) ...[
-              if (widget.libroObjeto.urlLectura != null)
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.green,
-                    child: Icon(Icons.lock_open, color: Colors.white),
-                  ),
-                  title: const Text('Escuchar Gratis'),
-                  subtitle: const Text('Reproducir ahora'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _abrirURLEnApp(widget.libroObjeto.urlLectura!);
-                  },
-                ),
-
               ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: Color(0xFFF7991C),
@@ -538,22 +514,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
             ),
             const SizedBox(height: 20),
             
-            // Si es gratuito (LibriVox)
-            if (widget.libroObjeto.precio == 0.0 && widget.libroObjeto.urlLectura != null)
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.green,
-                  child: Icon(Icons.lock_open, color: Colors.white),
-                ),
-                title: const Text('Escuchar gratis'),
-                subtitle: const Text('Audiolibro gratuito de dominio público'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  Navigator.pop(context);
-                  _abrirURLEnApp(widget.libroObjeto.urlLectura!);
-                },
-              ),
-            
             ListTile(
               leading: const CircleAvatar(
                 backgroundColor: Color(0xFFF7991C),
@@ -622,7 +582,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
           });
         }
       } else if (favorito == null) {
-        // Si es botón de guardar y ya existe -> Eliminar de la biblioteca
         await docRef.delete();
         setState(() {
           _estaGuardado = false;
@@ -631,7 +590,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
         _mostrarExito('"${widget.libroObjeto.titulo}" eliminado de la biblioteca');
         return;
       } else {
-        // Si no existe, crear nuevo
         final datosLibro = widget.libroObjeto.toMap();
         datosLibro['fechaGuardado'] = FieldValue.serverTimestamp();
         datosLibro['estado'] = 'guardado';
@@ -669,7 +627,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
 
       setState(() { _estaCargando = true; });
 
-      // 1. Guardar/actualizar el libro en la biblioteca del usuario con estado 'leyendo'
       final libroGuardadoRef = _firestore
           .collection('usuarios')
           .doc(usuario.uid)
@@ -688,7 +645,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
         await libroGuardadoRef.set(datosLibro);
       }
 
-      // 2. Crear o recuperar el progreso de lectura
       final progresoExistenteQuery = await _firestore
           .collection('progreso_lectura')
           .where('usuarioId', isEqualTo: usuario.uid)
@@ -715,7 +671,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
 
         await _firestore.collection('progreso_lectura').doc(nuevoProgresoId).set(nuevoProgresoData);
         
-        // Crear objeto local para pasar a la siguiente pantalla sin esperar recarga
         final mapLocal = Map<String, dynamic>.from(nuevoProgresoData);
         mapLocal['fechaInicio'] = Timestamp.now();
         progreso = ProgresoLectura.fromMap(mapLocal);
@@ -728,12 +683,7 @@ class _DetallesLibroState extends State<DetallesLibro> {
         _mostrarExito('Continuando la lectura de "${widget.libroObjeto.titulo}"');
       }
 
-      // 3. Actualizar estado local y navegar
       setState(() { _estaGuardado = true; });
-      
-      if (widget.libroObjeto.urlLectura != null) {
-        _abrirURLEnApp(widget.libroObjeto.urlLectura!);
-      }
       
       if (mounted) {
         Navigator.pushNamed(
@@ -783,7 +733,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Portada del libro
           Container(
             width: 120,
             height: 180,
@@ -824,7 +773,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
                   ),
           ),
           const SizedBox(width: 20),
-          // Información del libro
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -894,7 +842,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                // Badges
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
@@ -979,14 +926,13 @@ class _DetallesLibroState extends State<DetallesLibro> {
   }
 
   Widget _construirSeccionCompra() {
-    final bool esGratuito = widget.libroObjeto.precio == 0.0;
+    final bool tieneUrl = widget.libroObjeto.urlLectura != null;
     final bool esAudiolibro = widget.libroObjeto.esAudiolibro;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Si es gratuito y tiene URL de lectura
-        if (esGratuito && widget.libroObjeto.urlLectura != null) ...[
+        if (tieneUrl) ...[
           const SizedBox(height: 24),
           const Text(
             'Acceso Gratuito',
@@ -1036,7 +982,10 @@ class _DetallesLibroState extends State<DetallesLibro> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: _estaCargando ? null : _iniciarLectura,
+                    onPressed: _estaCargando ? null : () {
+                      _abrirURLEnApp(widget.libroObjeto.urlLectura!);
+                      _iniciarLectura();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -1051,7 +1000,6 @@ class _DetallesLibroState extends State<DetallesLibro> {
           ),
         ],
         
-        // Sección de tiendas 
         const SizedBox(height: 24),
         Text(
           esAudiolibro ? 'Plataformas de Audiolibros' : 'Disponibilidad en Tiendas',

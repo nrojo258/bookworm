@@ -25,7 +25,6 @@ class BibliotecaServiceUnificado {
   Future<List<Libro>> buscarLibros(String consulta, {String? genero, int limite = 20}) async {
     final List<Libro> todosLibros = [];
     
-    // Buscar en todas las APIs (excepto Google que ya tiene español)
     final futures = [
       _googleService.buscarLibros(consulta, genero: genero, limite: limite, pais: 'ES'),
       _gutendexService.buscarLibros(consulta, genero: genero, limite: limite),
@@ -38,7 +37,6 @@ class BibliotecaServiceUnificado {
       final resultados = await Future.wait(futures);
       
       for (var libros in resultados) {
-        // Mejorar descripciones en español
         final librosMejorados = await Future.wait(
           libros.map((libro) => _mejorarDescripcionEspanol(libro))
         );
@@ -58,7 +56,6 @@ class BibliotecaServiceUnificado {
     
     final descripcion = libro.descripcion!;
 
-    // Usar métodos públicos (sin guión bajo)
     if (_traductorService.esTextoEspanol(descripcion) || descripcion.length < 50) {
       return libro;
     }
@@ -99,15 +96,12 @@ class BibliotecaServiceUnificado {
     return null;
   }
   
-  // CORRECCIÓN en biblioteca_service_unificado.dart
 Future<List<Libro>> obtenerLibrosPopulares({int limite = 20}) async {
-  final List<Libro> todosLibros = []; // ← Especificar el tipo List<Libro>
+  final List<Libro> todosLibros = [];
   
   try {
-    // Solo algunas APIs tienen libros populares
     final futures = [
       _gutendexService.obtenerLibrosPopulares(limite: limite),
-      // Agrega otros servicios si tienen método similar
     ];
     
     final resultados = await Future.wait(futures);

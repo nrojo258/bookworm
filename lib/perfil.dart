@@ -21,6 +21,8 @@ class Perfil extends StatefulWidget {
 
 class _PerfilState extends State<Perfil> {
   int _seccionSeleccionada = 0;
+  String _filtroProgreso = 'todos';
+  bool _isInit = true;
   DatosUsuario? _datosUsuario;
   bool _estaCargando = true;
   final ServicioFirestore _servicioFirestore = ServicioFirestore();
@@ -28,17 +30,14 @@ class _PerfilState extends State<Perfil> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   
-  // Imagen seleccionada para subir
   File? _imagenSeleccionada;
   bool _subiendoImagen = false;
   
-  // Libros guardados
   List<Map<String, dynamic>> _librosGuardados = [];
   List<Map<String, dynamic>> _librosFavoritos = [];
   List<Map<String, dynamic>> _todosLosLibrosUsuario = [];
   bool _cargandoLibros = false;
   
-  // Progresos de lectura
   List<ProgresoLectura> _progresosLectura = [];
   bool _cargandoProgresos = false;
 
@@ -54,9 +53,17 @@ class _PerfilState extends State<Perfil> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic> && args.containsKey('seccionIndex')) {
-      _seccionSeleccionada = args['seccionIndex'];
+    if (_isInit) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        if (args.containsKey('seccionIndex')) {
+          _seccionSeleccionada = args['seccionIndex'];
+        }
+        if (args.containsKey('filtroEstado')) {
+          _filtroProgreso = args['filtroEstado'];
+        }
+      }
+      _isInit = false;
     }
   }
 
@@ -85,7 +92,6 @@ class _PerfilState extends State<Perfil> {
     final usuario = _auth.currentUser;
     if (usuario == null) return;
 
-    // Listener para libros guardados
     _firestore
         .collection('usuarios')
         .doc(usuario.uid)
@@ -112,7 +118,6 @@ class _PerfilState extends State<Perfil> {
       if (mounted) setState(() => _cargandoLibros = false);
     });
 
-    // Listener para progresos de lectura
     _firestore
         .collection('progreso_lectura')
         .where('usuarioId', isEqualTo: usuario.uid)
@@ -349,6 +354,11 @@ class _PerfilState extends State<Perfil> {
     File? imagenTemp,
   ) async {
     try {
+      if (nombre.trim().isEmpty) {
+        _mostrarError('El nombre no puede estar vacío');
+        return;
+      }
+
       String? nuevaUrl = _datosUsuario?.urlImagenPerfil;
 
       if (imagenTemp != null) {
@@ -411,7 +421,6 @@ class _PerfilState extends State<Perfil> {
 
       await _firestore.collection('progreso_lectura').doc(progresoId).delete();
 
-      // Actualización optimista de la UI para reflejar el cambio inmediatamente.
       if (mounted) {
         setState(() {
           _progresosLectura.removeWhere((progreso) => progreso.id == progresoId);
@@ -434,10 +443,17 @@ class _PerfilState extends State<Perfil> {
   }
 
   void _mostrarDialogoActualizarProgreso(ProgresoLectura progreso) {
+    final libroMap = _todosLosLibrosUsuario.firstWhere(
+      (l) => l['libroId'] == progreso.libroId || l['id'] == progreso.libroId,
+      orElse: () => {},
+    );
+    final bool esAudiolibro = libroMap['esAudiolibro'] == true;
+
     final paginaCtrl = TextEditingController(text: progreso.paginaActual.toString());
     final paginasTotalesCtrl = TextEditingController(text: progreso.paginasTotales.toString());
     double? calificacion = progreso.calificacion;
     final resenaCtrl = TextEditingController(text: progreso.resena ?? '');
+    final tiempoCtrl = TextEditingController();
 
     showDialog(
       context: context,
@@ -457,18 +473,28 @@ class _PerfilState extends State<Perfil> {
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: paginaCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Página actual',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: esAudiolibro ? 'Minuto actual' : 'Página actual',
+                      border: const OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: paginasTotalesCtrl,
+                    decoration: InputDecoration(
+                      labelText: esAudiolibro ? 'Duración total (min)' : 'Páginas totales',
+                      border: const OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: tiempoCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Páginas totales',
+                      labelText: 'Tiempo leído ahora (min)',
                       border: OutlineInputBorder(),
+                      suffixText: 'min',
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -512,7 +538,11 @@ class _PerfilState extends State<Perfil> {
                 onPressed: () async {
                   final paginaActual = int.tryParse(paginaCtrl.text) ?? 0;
                   final paginasTotales = int.tryParse(paginasTotalesCtrl.text) ?? 0;
+                  final tiempoLeido = int.tryParse(tiempoCtrl.text) ?? 0;
                   
+                  final now = DateTime.now();
+                  final fechaKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
                   String estado = 'leyendo';
                   if (paginaActual >= paginasTotales && paginasTotales > 0) {
                     estado = 'completado';
@@ -529,6 +559,49 @@ class _PerfilState extends State<Perfil> {
                       paginaActual: paginaActual,
                       fechaCompletado: estado == 'completado' ? DateTime.now() : null,
                     );
+
+                    if (tiempoLeido > 0) {
+                      int rachaActual = _datosUsuario?.estadisticas['rachaActual'] ?? 0;
+                      dynamic ultimaFechaRaw = _datosUsuario?.estadisticas['ultimaFechaLectura'];
+                      DateTime? ultimaFecha;
+                      
+                      if (ultimaFechaRaw is Timestamp) {
+                        ultimaFecha = ultimaFechaRaw.toDate();
+                      }
+
+                      final hoy = DateTime(now.year, now.month, now.day);
+                      final ayer = hoy.subtract(const Duration(days: 1));
+                      DateTime? ultimaFechaDia;
+                      
+                      if (ultimaFecha != null) {
+                        ultimaFechaDia = DateTime(ultimaFecha.year, ultimaFecha.month, ultimaFecha.day);
+                      }
+
+                      if (ultimaFechaDia == null || ultimaFechaDia.isBefore(ayer)) {
+                        rachaActual = 1;
+                      } else if (ultimaFechaDia.isAtSameMomentAs(ayer)) {
+                        rachaActual++;
+                      }
+
+                      await _firestore.collection('usuarios').doc(_auth.currentUser!.uid).update({
+                        'estadisticas.tiempoLectura': FieldValue.increment(tiempoLeido),
+                        'estadisticas.lecturaDiaria.$fechaKey': FieldValue.increment(tiempoLeido),
+                        'estadisticas.rachaActual': rachaActual,
+                        'estadisticas.ultimaFechaLectura': FieldValue.serverTimestamp(),
+                      });
+                      if (mounted && _datosUsuario != null) {
+                        setState(() {
+                          _datosUsuario!.estadisticas['tiempoLectura'] = (_datosUsuario!.estadisticas['tiempoLectura'] ?? 0) + tiempoLeido;
+                          
+                          Map<String, dynamic> lecturaDiaria = Map<String, dynamic>.from(_datosUsuario!.estadisticas['lecturaDiaria'] ?? {});
+                          lecturaDiaria[fechaKey] = (lecturaDiaria[fechaKey] ?? 0) + tiempoLeido;
+                          _datosUsuario!.estadisticas['lecturaDiaria'] = lecturaDiaria;
+                          
+                          _datosUsuario!.estadisticas['rachaActual'] = rachaActual;
+                          _datosUsuario!.estadisticas['ultimaFechaLectura'] = Timestamp.now();
+                        });
+                      }
+                    }
 
                     if (calificacion != null || resenaCtrl.text.isNotEmpty) {
                       await _firestore
@@ -550,7 +623,6 @@ class _PerfilState extends State<Perfil> {
                     }
 
                     if (mounted) {
-                      // Actualización optimista de la UI para reflejar los cambios inmediatamente
                       setState(() {
                         final index = _progresosLectura.indexWhere((p) => p.id == progreso.id);
                         if (index != -1) {
@@ -652,6 +724,52 @@ class _PerfilState extends State<Perfil> {
     }
   }
 
+  void _mostrarDialogoEditarTiempoTotal() {
+    final tiempoActual = _datosUsuario?.estadisticas['tiempoLectura'] ?? 0;
+    final tiempoCtrl = TextEditingController(text: tiempoActual.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Tiempo Total'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Ajusta el tiempo total de lectura registrado.'),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: tiempoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Minutos totales',
+                border: OutlineInputBorder(),
+                suffixText: 'min',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nuevoTiempo = int.tryParse(tiempoCtrl.text) ?? tiempoActual;
+              await _servicioFirestore.actualizarDatosUsuario(
+                _auth.currentUser!.uid,
+                {'estadisticas.tiempoLectura': nuevoTiempo},
+              );
+              await _cargarDatosUsuario();
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _cerrarSesion() async {
     await _auth.signOut();
     if (mounted) {
@@ -668,7 +786,6 @@ class _PerfilState extends State<Perfil> {
       );
     }
 
-    // Calcular libros leídos directamente del progreso local
     final int librosLeidos = _progresosLectura.where((p) => p.estado == 'completado').length;
 
     return Container(
@@ -1033,26 +1150,19 @@ class _PerfilState extends State<Perfil> {
       );
     }
 
-    if (_progresosLectura.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: EstilosApp.tarjeta,
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mi Progreso',
-              style: EstilosApp.tituloMedio,
-            ),
-            SizedBox(height: 16),
-            EstadoVacio(
-              icono: Icons.book,
-              titulo: 'No tienes lecturas en progreso',
-              descripcion: 'Empieza a leer un libro para ver tu progreso aquí',
-            ),
-          ],
-        ),
-      );
+    List<ProgresoLectura> listaFiltrada = _progresosLectura;
+    if (_filtroProgreso != 'todos') {
+      listaFiltrada = _progresosLectura.where((p) => p.estado == _filtroProgreso).toList();
+    }
+
+    final now = DateTime.now();
+    final fechaKey = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    int minutosHoy = 0;
+    if (_datosUsuario?.estadisticas['lecturaDiaria'] != null) {
+      final diario = _datosUsuario!.estadisticas['lecturaDiaria'];
+      if (diario is Map) {
+        minutosHoy = int.tryParse(diario[fechaKey]?.toString() ?? '0') ?? 0;
+      }
     }
 
     return Container(
@@ -1066,7 +1176,70 @@ class _PerfilState extends State<Perfil> {
             style: EstilosApp.tituloMedio,
           ),
           const SizedBox(height: 16),
-          ..._progresosLectura.map((progreso) {
+          
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: AppColores.primario.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColores.primario.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.timer, color: AppColores.primario, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Tiempo de Lectura', style: TextStyle(fontWeight: FontWeight.bold, color: AppColores.primario)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text('Hoy: $minutosHoy min', style: EstilosApp.cuerpoMedio.copyWith(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      Text('Meta diaria: ${_datosUsuario?.preferencias['minutos_lectura_diaria'] ?? 30} min', style: EstilosApp.cuerpoPequeno),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _construirChipFiltro('Todos', 'todos'),
+                const SizedBox(width: 8),
+                _construirChipFiltro('Leyendo', 'leyendo'),
+                const SizedBox(width: 8),
+                _construirChipFiltro('Completados', 'completado'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (listaFiltrada.isEmpty)
+            EstadoVacio(
+              icono: Icons.book,
+              titulo: _filtroProgreso == 'completado' 
+                  ? 'No has completado libros aún' 
+                  : (_filtroProgreso == 'leyendo' 
+                      ? 'No estás leyendo nada actualmente' 
+                      : 'No tienes lecturas en progreso'),
+              descripcion: 'Empieza a leer un libro para ver tu progreso aquí',
+            )
+          else
+            ...listaFiltrada.map((progreso) {
+            final libroMap = _todosLosLibrosUsuario.firstWhere(
+              (l) => l['libroId'] == progreso.libroId || l['id'] == progreso.libroId,
+              orElse: () => {},
+            );
+            final bool esAudiolibro = libroMap['esAudiolibro'] == true;
+
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(16),
@@ -1076,11 +1249,6 @@ class _PerfilState extends State<Perfil> {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      final libroMap = _todosLosLibrosUsuario.firstWhere(
-                        (l) => l['libroId'] == progreso.libroId || l['id'] == progreso.libroId,
-                        orElse: () => {},
-                      );
-
                       Libro libro;
                       if (libroMap.isNotEmpty) {
                         libro = Libro(
@@ -1172,7 +1340,9 @@ class _PerfilState extends State<Perfil> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '${progreso.paginaActual}/${progreso.paginasTotales} páginas',
+                                  esAudiolibro 
+                                      ? '${progreso.paginaActual}/${progreso.paginasTotales} min'
+                                      : '${progreso.paginaActual}/${progreso.paginasTotales} páginas',
                                   style: EstilosApp.cuerpoPequeno,
                                 ),
                                 Text(
@@ -1217,14 +1387,34 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
+  Widget _construirChipFiltro(String label, String valor) {
+    final isSelected = _filtroProgreso == valor;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        if (selected) {
+          setState(() {
+            _filtroProgreso = valor;
+          });
+        }
+      },
+      selectedColor: AppColores.primario.withOpacity(0.2),
+      backgroundColor: Colors.grey[100],
+      labelStyle: TextStyle(
+        color: isSelected ? AppColores.primario : Colors.black54,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
+
   Widget _construirSeccionEstadisticas() {
-    // Calcular estadísticas en tiempo real basadas en el progreso local
     final int librosLeidos = _progresosLectura.where((p) => p.estado == 'completado').length;
     final int paginasLeidas = _progresosLectura.fold(0, (sum, p) => sum + p.paginaActual);
 
-    // Calcular géneros desde el progreso local y biblioteca
     final Map<String, int> conteoGeneros = {};
-    // Usamos _todosLosLibrosUsuario para incluir favoritos, guardados, leyendo y completados
     int totalCategorias = 0;
     
     for (final libro in _todosLosLibrosUsuario) {
@@ -1273,7 +1463,6 @@ class _PerfilState extends State<Perfil> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
-              // Crear un mapa de estadísticas actualizado para pasar a los gráficos
               final estadisticasActualizadas = Map<String, dynamic>.from(_datosUsuario?.estadisticas ?? {});
               estadisticasActualizadas['librosLeidos'] = librosLeidos;
               estadisticasActualizadas['paginasTotales'] = paginasLeidas;
@@ -1281,7 +1470,6 @@ class _PerfilState extends State<Perfil> {
               estadisticasActualizadas['objetivoMensual'] = _datosUsuario?.preferencias['libros_por_mes'] ?? 1;
               estadisticasActualizadas['librosEnProgreso'] = _progresosLectura.where((p) => p.estado == 'leyendo').length;
 
-              // Calcular libros por mes (últimos 6 meses)
               final Map<String, int> librosPorMes = {};
               final now = DateTime.now();
               final meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -1293,7 +1481,6 @@ class _PerfilState extends State<Perfil> {
 
               for (final progreso in _progresosLectura) {
                 if (progreso.estado == 'completado') {
-                  // Intentar obtener fechaCompletado del mapa si no es accesible directamente
                   final map = progreso.toMap();
                   final fechaRaw = map['fechaCompletado'];
                   DateTime? fecha;
@@ -1311,7 +1498,6 @@ class _PerfilState extends State<Perfil> {
               }
               estadisticasActualizadas['librosPorMes'] = librosPorMes;
 
-              // Calcular distribución de progreso
               estadisticasActualizadas['progreso'] = {
                 'Leyendo': _progresosLectura.where((p) => p.estado == 'leyendo').length,
                 'Completado': _progresosLectura.where((p) => p.estado == 'completado').length,
@@ -1379,6 +1565,12 @@ class _PerfilState extends State<Perfil> {
             subtitulo: '${_datosUsuario?.preferencias['libros_por_mes'] ?? 1} libros por mes',
             icono: Icons.flag,
             alPresionar: () => _mostrarDialogoObjetivoMensual(),
+          ),
+          ElementoConfiguracion(
+            titulo: 'Meta de Lectura Diaria',
+            subtitulo: '${_datosUsuario?.preferencias['minutos_lectura_diaria'] ?? 30} minutos al día',
+            icono: Icons.timer,
+            alPresionar: () => _mostrarDialogoMetaLectura(),
           ),
         ],
       ),
@@ -1694,6 +1886,54 @@ class _PerfilState extends State<Perfil> {
     );
   }
 
+  void _mostrarDialogoMetaLectura() {
+    int metaActual = _datosUsuario?.preferencias['minutos_lectura_diaria'] ?? 30;
+    final metaCtrl = TextEditingController(text: metaActual.toString());
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Meta de Lectura Diaria'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('¿Cuántos minutos quieres leer al día?'),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: metaCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Minutos por día',
+                border: OutlineInputBorder(),
+                suffixText: 'min',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nuevaMeta = int.tryParse(metaCtrl.text) ?? 30;
+              if (_datosUsuario != null) {
+                await _servicioFirestore.actualizarDatosUsuario(
+                  _datosUsuario!.uid,
+                  {'preferencias.minutos_lectura_diaria': nuevaMeta},
+                );
+                await _cargarDatosUsuario();
+              }
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _mostrarDialogoPrivacidad() {
     bool perfilPublico = _datosUsuario?.preferencias['perfil_publico'] ?? true;
     bool actividadPublica = _datosUsuario?.preferencias['actividad_publica'] ?? true;
@@ -1776,11 +2016,6 @@ class _PerfilState extends State<Perfil> {
             children: [
               Text('¿Necesitas ayuda?', style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              Text('Email: soporte@bookworm.com'),
-              Text('Teléfono: +1 234 567 8900'),
-              SizedBox(height: 16),
-              Text('Horario de atención: Lunes a Viernes, 9:00 - 18:00'),
-              SizedBox(height: 16),
               Text('Preguntas frecuentes:'),
               Text('- ¿Cómo guardar libros?'),
               Text('- ¿Cómo iniciar progreso de lectura?'),

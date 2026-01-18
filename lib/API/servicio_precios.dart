@@ -26,7 +26,6 @@ class ServicioPrecios {
         }
       }
       
-      // Si no encuentra por ISBN, buscar por título y autor
       String query = libroOriginal.titulo;
       if (libroOriginal.autores.isNotEmpty) {
         query += ' ${libroOriginal.autores.first}';
@@ -54,7 +53,6 @@ class ServicioPrecios {
     }
   }
 
-  /// Encuentra el libro de Google Books más similar al libro original
   Libro _encontrarLibroMasSimilar(Libro original, List<Libro> candidatos) {
     Libro mejorCandidato = candidatos.first;
     double mejorSimilitud = 0;
@@ -70,11 +68,9 @@ class ServicioPrecios {
     return mejorCandidato;
   }
 
-  /// Calcula la similitud entre dos libros
   double _calcularSimilitud(Libro libro1, Libro libro2) {
     double similitud = 0.0;
     
-    // Comparar títulos
     final titulo1 = libro1.titulo.toLowerCase();
     final titulo2 = libro2.titulo.toLowerCase();
     
@@ -84,7 +80,6 @@ class ServicioPrecios {
       similitud += 0.3;
     }
     
-    // Comparar autores
     if (libro1.autores.isNotEmpty && libro2.autores.isNotEmpty) {
       for (var autor1 in libro1.autores) {
         for (var autor2 in libro2.autores) {
@@ -96,7 +91,6 @@ class ServicioPrecios {
       }
     }
     
-    // Comparar ISBN
     if (libro1.isbn != null && libro2.isbn != null && libro1.isbn == libro2.isbn) {
       similitud += 1.0;
     }
@@ -104,7 +98,6 @@ class ServicioPrecios {
     return similitud;
   }
 
-  /// Combina la información de dos libros
   Libro _combinarLibros(Libro original, Libro googleBook) {
     return original.copyWith(
       precio: googleBook.precio ?? original.precio,
@@ -124,15 +117,12 @@ class ServicioPrecios {
     if (desc2 == null) return desc1;
     if (desc1 == null) return desc2;
     
-    // Preferir la descripción más larga (más detallada)
     return desc2.length > desc1.length ? desc2 : desc1;
   }
 
-  /// Busca precios específicos para una lista de libros
   Future<List<Libro>> mejorarLibrosConPrecios(List<Libro> libros) async {
     final resultados = <Libro>[];
     
-    // Procesar en lotes para no sobrecargar la API
     for (int i = 0; i < libros.length; i++) {
       try {
         final libroMejorado = await mejorarLibroConPrecios(libros[i]);

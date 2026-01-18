@@ -110,13 +110,11 @@ class Libro {
     String? urlCompra;
     List<OfertaTienda> ofertas = [];
 
-    // Extraer información de venta de Google Books
     if (ventaInfo['saleability'] == 'FOR_SALE') {
       precio = (ventaInfo['listPrice']?['amount'] as num?)?.toDouble();
       moneda = ventaInfo['listPrice']?['currencyCode'];
       urlCompra = ventaInfo['buyLink'];
       
-      // Crear oferta de Google Play Books si hay enlace de compra
       if (urlCompra != null && precio != null) {
         ofertas.add(OfertaTienda(
           tienda: 'Google Play Books',
@@ -127,7 +125,6 @@ class Libro {
       }
     }
 
-    // Extraer ISBNs
     for (var id in identificadores) {
       if (id['type'] == 'ISBN_10') {
         isbn10 = id['identifier'];
@@ -227,16 +224,13 @@ class Libro {
     );
   }
 
-  // Método para obtener el ISBN preferido
   String? get isbn => isbn13 ?? isbn10;
 
-  // Método para obtener ofertas con enlaces reales a tiendas
   List<OfertaTienda> get ofertasConSimuladas {
     if (ofertas.isNotEmpty) {
       return ofertas;
     }
     
-    // Si el libro es gratuito, mostrar tiendas de dominio público
     if (precio == 0.0) {
       return [
         OfertaTienda(
@@ -254,10 +248,8 @@ class Libro {
       ];
     }
     
-    // Para libros de pago, crear enlaces de búsqueda reales
     final busqueda = titulo;
     
-    // URLs reales de búsqueda en tiendas españolas
     final tiendas = [
       (
         'Amazon',
@@ -277,7 +269,6 @@ class Libro {
       ),
     ];
     
-    // Para audiolibros, añadir tiendas específicas
     if (esAudiolibro) {
       tiendas.addAll([
         (
@@ -294,21 +285,18 @@ class Libro {
     List<OfertaTienda> ofertasSimuladas = [];
     
     for (final tienda in tiendas) {
-      // Precio base con variaciones realistas
       double precioTienda = precio ?? _calcularPrecioSimulado();
       
-      // Ajustes según tienda (precios reales aproximados)
       if (tienda.$1 == 'Amazon') {
-        precioTienda *= 0.95; // Amazon suele ser más barato
+        precioTienda *= 0.95;
       } else if (tienda.$1 == 'Audible') {
-        precioTienda = (precioTienda * 0.8).clamp(9.99, 29.99); // Audible tiene suscripción
+        precioTienda = (precioTienda * 0.8).clamp(9.99, 29.99);
       } else if (tienda.$1 == 'Storytel') {
-        precioTienda = 0.0; // Storytel es por suscripción
+        precioTienda = 0.0;
       } else if (tienda.$1 == 'El Corte Inglés') {
-        precioTienda *= 1.05; // El Corte Inglés suele ser más caro
+        precioTienda *= 1.05;
       }
       
-      // Redondear a .99
       precioTienda = (precioTienda.floorToDouble() + 0.99);
       
       ofertasSimuladas.add(OfertaTienda(
@@ -322,14 +310,11 @@ class Libro {
     return ofertasSimuladas;
   }
 
-  // Método para calcular precio simulado basado en características del libro
   double _calcularPrecioSimulado() {
     double precioBase = 12.99;
     
-    // Ajustar precio según características del libro
     final tituloLower = titulo.toLowerCase();
     
-    // Libros best sellers o populares - más caros
     if (tituloLower.contains('harry potter') || 
         tituloLower.contains('señor de los anillos') ||
         tituloLower.contains('juego de tronos') ||
@@ -337,7 +322,6 @@ class Libro {
         tituloLower.contains('éxito de ventas')) {
       precioBase = 18.99;
     }
-    // Libros de autor famoso
     else if (autores.any((autor) => 
         autor.toLowerCase().contains('rowling') ||
         autor.toLowerCase().contains('tolkien') ||
@@ -345,7 +329,6 @@ class Libro {
         autor.toLowerCase().contains('king'))) {
       precioBase = 16.99;
     }
-    // Libros clásicos - más baratos
     else if (tituloLower.contains('clásico') || 
              tituloLower.contains('clasico') ||
              fechaPublicacion != null && 
@@ -353,7 +336,6 @@ class Libro {
              int.parse(fechaPublicacion!) < 1900) {
       precioBase = 9.99;
     }
-    // Libros técnicos/educativos - más caros
     else if (tituloLower.contains('programación') ||
              tituloLower.contains('informática') ||
              tituloLower.contains('ciencia') ||
@@ -364,27 +346,22 @@ class Libro {
                  cat.toLowerCase().contains('tecnología'))) {
       precioBase = 24.99;
     }
-    // Audiolibros - más caros
     else if (esAudiolibro) {
       precioBase = 15.99;
     }
-    // Libros infantiles - más baratos
     else if (categorias.any((cat) => 
                  cat.toLowerCase().contains('infantil') ||
                  cat.toLowerCase().contains('niños') ||
                  cat.toLowerCase().contains('juvenil'))) {
       precioBase = 8.99;
     }
-    // Libros de bolsillo o económicos
     else if (numeroPaginas != null && numeroPaginas! < 150) {
       precioBase = 7.99;
     }
-    // Libros largos - más caros
     else if (numeroPaginas != null && numeroPaginas! > 500) {
       precioBase = 16.99;
     }
     
-    // Ajustar por calificación (libros mejor valorados son más caros)
     if (calificacionPromedio != null && calificacionPromedio! > 4.0) {
       precioBase += 2.0;
     }

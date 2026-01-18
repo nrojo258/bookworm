@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'diseno.dart';
 import 'componentes.dart';
 import 'servicio/servicio_firestore.dart';
@@ -13,6 +14,7 @@ class Clubs extends StatefulWidget {
 class _ClubsState extends State<Clubs> {
   final TextEditingController _controladorBusqueda = TextEditingController();
   final ServicioFirestore _servicioFirestore = ServicioFirestore();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   int _seccionSeleccionada = 0;
   
   List<Map<String, dynamic>> _misClubs = [];
@@ -23,6 +25,7 @@ class _ClubsState extends State<Clubs> {
   void initState() {
     super.initState();
     _cargarClubs();
+    _servicioFirestore.corregirNombreUsuarioAuth();
   }
 
   @override
@@ -42,6 +45,27 @@ class _ClubsState extends State<Clubs> {
       }
     } catch (e) {
       print('Error cargando clubs: $e');
+    } finally {
+      setState(() => _cargandoClubs = false);
+    }
+  }
+
+  Future<void> _realizarBusqueda() async {
+    final texto = _controladorBusqueda.text.trim();
+    if (texto.isEmpty) {
+      _cargarClubs();
+      return;
+    }
+    
+    setState(() => _cargandoClubs = true);
+    try {
+      final resultados = await _servicioFirestore.buscarClubs(texto);
+      setState(() {
+        _clubsRecomendados = resultados;
+        _seccionSeleccionada = 0;
+      });
+    } catch (e) {
+      print('Error buscando: $e');
     } finally {
       setState(() => _cargandoClubs = false);
     }
@@ -103,11 +127,11 @@ class _ClubsState extends State<Clubs> {
               child: const Text('Cancelar')
             ),
             ElevatedButton(
-              onPressed: controladorNombre.text.isEmpty || generoDialogo == null ? null : () async {
+              onPressed: controladorNombre.text.trim().isEmpty || generoDialogo == null ? null : () async {
                 Navigator.pop(context);
                 await _crearClub(
-                  controladorNombre.text,
-                  controladorDescripcion.text,
+                  controladorNombre.text.trim(),
+                  controladorDescripcion.text.trim(),
                   generoDialogo!,
                 );
               },
@@ -157,11 +181,48 @@ class _ClubsState extends State<Clubs> {
     }
   }
 
+  Future<void> _eliminarClub(String clubId, String nombreClub) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Club'),
+        content: Text('¿Estás seguro de que quieres eliminar el club "$nombreClub"?\nEsta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      await _servicioFirestore.eliminarClub(clubId);
+      await _cargarClubs();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Club eliminado exitosamente')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
   void _unirseAClub(String clubId, String clubNombre) async {
     try {
       await _servicioFirestore.unirseAClub(clubId);
       
-      // Actualizar la lista de clubs
       await _cargarClubs();
 
       if (mounted) {
@@ -188,101 +249,135 @@ class _ClubsState extends State<Clubs> {
 
   Widget _construirTarjetaClub(Map<String, dynamic> club) {
     final rol = club['rol'] ?? 'miembro';
+    final rawNombre = club['nombre']?.toString().trim() ?? 'Club sin nombre';
+    final nombre = rawNombre.isEmpty ? 'Club sin nombre' : rawNombre;
+    
+    final inicial = nombre.isNotEmpty ? nombre.substring(0, 1).toUpperCase() : 'C';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: EstilosApp.tarjetaPlana,
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  club['nombre'] ?? 'Sin nombre',
-                  style: EstilosApp.tituloPequeno,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColores.primario.withOpacity(0.1),
+            child: Text(
+              inicial,
+              style: TextStyle(color: AppColores.primario, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombre,
+                        style: EstilosApp.tituloPequeno,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_seccionSeleccionada == 1 && rol == 'creador') ...[
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        onPressed: () => _eliminarClub(club['id'], nombre),
+                        tooltip: 'Eliminar club',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColores.primario.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        club['genero'] ?? 'General',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColores.primario,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColores.primario.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  club['genero'] ?? 'General',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColores.primario,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(height: 4),
+                if (club['descripcion'] != null && club['descripcion'].toString().isNotEmpty)
+                  Text(
+                    club['descripcion'].toString(),
+                    style: EstilosApp.cuerpoMedio,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.people, size: 14, color: Color(0xFF9E9E9E)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${club['miembrosCount'] ?? 0}',
+                      style: EstilosApp.cuerpoPequeno,
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.person, size: 14, color: Color(0xFF9E9E9E)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Por: ${club['creadorNombre'] ?? 'Usuario'}',
+                        style: EstilosApp.cuerpoPequeno,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          if (club['descripcion'] != null && club['descripcion'].toString().isNotEmpty)
-            Text(
-              club['descripcion'].toString(),
-              style: EstilosApp.cuerpoMedio,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 12),
+                if (_seccionSeleccionada == 0)
+                  ElevatedButton(
+                    onPressed: () => _unirseAClub(club['id'], nombre),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 36),
+                      backgroundColor: AppColores.secundario,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text('Unirse'),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: () async {
+                      await Navigator.pushNamed(
+                        context,
+                        '/chat_club',
+                        arguments: {
+                          'clubId': club['id'],
+                          'clubNombre': nombre,
+                          'rolUsuario': rol,
+                        },
+                      );
+                      _cargarClubs();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 36),
+                      backgroundColor: AppColores.primario,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text('Chat'),
+                  ),
+              ],
             ),
-          
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.people, size: 16, color: Color(0xFF9E9E9E)),
-              const SizedBox(width: 4),
-              Text(
-                '${club['miembrosCount'] ?? 0} miembros',
-                style: EstilosApp.cuerpoPequeno,
-              ),
-              const SizedBox(width: 16),
-              const Icon(Icons.person, size: 16, color: Color(0xFF9E9E9E)),
-              const SizedBox(width: 4),
-              Text(
-                club['creadorNombre'] ?? 'Usuario',
-                style: EstilosApp.cuerpoPequeno,
-              ),
-            ],
           ),
-          const SizedBox(height: 12),
-          
-          if (_seccionSeleccionada == 0)
-            ElevatedButton(
-              onPressed: () => _unirseAClub(club['id'], club['nombre']),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 40),
-                backgroundColor: AppColores.secundario,
-              ),
-              child: const Text('Unirse al club'),
-            )
-          else
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  '/chat_club',
-                  arguments: {
-                    'clubId': club['id'],
-                    'clubNombre': club['nombre'],
-                    'rolUsuario': rol,
-                  },
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 40),
-                backgroundColor: AppColores.primario,
-              ),
-              child: const Text('Entrar al chat'),
-            ),
-        ],
+        ]
       ),
     );
   }
@@ -331,9 +426,7 @@ class _ClubsState extends State<Clubs> {
                   BarraBusquedaPersonalizada(
                     controlador: _controladorBusqueda,
                     textoHint: 'Buscar clubs...',
-                    alBuscar: () {
-                      print('Buscar: ${_controladorBusqueda.text}');
-                    },
+                    alBuscar: _realizarBusqueda,
                   ),
                 ],
               ),

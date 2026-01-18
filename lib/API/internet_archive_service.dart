@@ -13,14 +13,12 @@ class InternetArchiveService {
     try {
       String query = 'title:($consulta) AND mediatype:(texts)';
       
-      // FILTRO PRINCIPAL: buscar contenido en español
       query += ' AND (languageS:(spanish) OR languageS:(spa) OR language:(spanish) OR language:(spa))';
       
       if (genero != null && genero != 'Todos los géneros') {
         query += ' AND subject:(${Uri.encodeComponent(genero)})';
       }
       
-      // Campos que queremos obtener
       final fields = [
         'identifier',
         'title',
@@ -44,7 +42,6 @@ class InternetArchiveService {
         final datos = json.decode(respuesta.body);
         final List<dynamic> docs = datos['response']?['docs'] ?? [];
         
-        // Usar map y toList en lugar de Future.wait para evitar problemas
         final libros = <Libro>[];
         for (var doc in docs) {
           try {
@@ -56,7 +53,6 @@ class InternetArchiveService {
           }
         }
         
-        // Si no encontramos suficientes en español, buscar sin filtro de idioma
         if (libros.length < 5 && consulta.isNotEmpty) {
           return await _buscarSinFiltroIdioma(consulta, genero: genero, limite: limite);
         }
@@ -139,7 +135,6 @@ class InternetArchiveService {
     
     if (creator != null) {
       if (creator is List) {
-        // CORRECCIÓN AQUÍ: Convertir cada elemento a String
         autores = creator.map((item) {
           if (item == null) return 'Autor desconocido';
           return item.toString();
@@ -151,7 +146,6 @@ class InternetArchiveService {
       }
     }
 
-    // Manejar idiomas
     final idiomaRaw = doc['languageS'] ?? doc['language'];
     List<String> idiomas = [];
 
@@ -171,7 +165,6 @@ class InternetArchiveService {
     String? descripcionOriginal = _limpiarHtml(doc['description']);
     String descripcion = descripcionOriginal ?? '';
     
-    // Mejorar descripción si está vacía o en inglés
     if (descripcion.isEmpty || _traductorService.esTextoIngles(descripcion)) {
       final idiomasStr = idiomas.isNotEmpty ? ' Disponible en: ${idiomas.join(", ")}.' : '';
       final fechaRaw = doc['date'];
@@ -190,14 +183,12 @@ class InternetArchiveService {
       descripcion = 'Documento digital disponible en Internet Archive.$fechaStr$idiomasStr '
                     'Forma parte de la biblioteca digital de acceso libre.';
     } else if (descripcionOriginal != null && _traductorService.esTextoIngles(descripcionOriginal)) {
-      // Intentar traducir si está en inglés
       final traducido = await _traductorService.traducirTexto(descripcionOriginal);
       if (traducido != null && traducido.isNotEmpty) {
         descripcion = traducido;
       }
     }
 
-    // Manejar categorías/subjects
     List<String> categorias = [];
     final subject = doc['subject'];
     
@@ -263,7 +254,6 @@ class InternetArchiveService {
     
     final descripcion = libro.descripcion!;
     
-    // Si la descripción está en inglés, mejorarla
     if (_traductorService.esTextoIngles(descripcion)) {
       final autoresStr = libro.autores.isNotEmpty ? ' Autor(es): ${libro.autores.join(", ")}.' : '';
       final fechaStr = libro.fechaPublicacion != null ? ' Fecha: ${libro.fechaPublicacion}.' : '';

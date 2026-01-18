@@ -30,7 +30,6 @@ class Historial extends StatelessWidget {
         );
       }
     } catch (e) {
-      // Manejar error silenciosamente
     }
   }
 
@@ -145,10 +144,8 @@ class Historial extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final doc = snapshot.data!.docs[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    // Asegurar que el ID esté presente
                     data['id'] = doc.id;
                     
-                    // Reconstruir el objeto Libro desde los datos guardados
                     final libro = Libro.fromMap(data);
 
                     return Dismissible(

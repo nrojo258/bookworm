@@ -11,8 +11,7 @@ class OpenLibraryService {
     try {
       String urlBusqueda = '$_urlBase/search.json?q=${Uri.encodeComponent(consulta)}&limit=$limite';
       
-      // FILTRO PARA IDIOMA ESPAÑOL
-      urlBusqueda += '&language=spa'; // Priorizar español
+      urlBusqueda += '&language=spa';
       
       if (genero != null && genero != 'Todos los géneros') {
         urlBusqueda += '&subject=${Uri.encodeComponent(genero)}';
@@ -26,7 +25,6 @@ class OpenLibraryService {
         if (docs == null) return [];
         final libros = docs.map((doc) => _mapearLibroDesdeDoc(doc)).toList();
         
-        // Si no encontramos suficientes, buscar sin filtro de idioma
         if (libros.length < 5 && consulta.isNotEmpty) {
           return await _buscarSinFiltroIdioma(consulta, genero: genero, limite: limite);
         }
@@ -65,7 +63,6 @@ class OpenLibraryService {
 
   Future<Libro?> obtenerDetalles(String id) async {
     try {
-      // Si el id viene con prefijo (como 'ol_'), lo limpiamos
       final idLimpio = id.contains('/') ? id : '/books/$id';
       final url = Uri.parse('$_urlBase$idLimpio.json');
       final respuesta = await http.get(url);
@@ -88,14 +85,12 @@ class OpenLibraryService {
       urlMiniatura = 'https://covers.openlibrary.org/b/id/${doc['cover_i']}-M.jpg';
     }
 
-    // Obtener idiomas
     final languages = doc['language'] as List?;
     final idiomas = languages != null ? List<String>.from(languages) : [];
 
     String? descripcionOriginal = _limpiarHtml(doc['first_sentence'] ?? doc['description']);
     String descripcion = descripcionOriginal ?? '';
     
-    // Mejorar descripción si está vacía o en inglés
     if (descripcion.isEmpty || _esTextoIngles(descripcion)) {
       final idiomasStr = idiomas.isNotEmpty ? ' Idiomas: ${idiomas.join(", ")}.' : '';
       final fechaStr = doc['first_publish_year'] != null ? ' Publicado en ${doc['first_publish_year']}.' : '';
@@ -129,7 +124,6 @@ class OpenLibraryService {
       urlMiniatura = 'https://covers.openlibrary.org/b/id/${json['covers'][0]}-M.jpg';
     }
 
-    // Obtener idiomas
     final languages = json['languages'] as List?;
     final idiomas = languages != null 
         ? languages.map((l) => l['key']?.toString().split('/').last ?? '').toList()
@@ -138,7 +132,6 @@ class OpenLibraryService {
     String? descripcionOriginal = _limpiarHtml(json['description']);
     String descripcion = descripcionOriginal ?? '';
     
-    // Mejorar descripción si está vacía o en inglés
     if (descripcion.isEmpty || _esTextoIngles(descripcion)) {
       final idiomasStr = idiomas.isNotEmpty ? ' Disponible en ${idiomas.length} idioma(s).' : '';
       final fechaStr = json['publish_date'] ?? json['first_publish_date'];
@@ -205,7 +198,6 @@ class OpenLibraryService {
     
     final descripcion = libro.descripcion!;
     
-    // Si la descripción está en inglés, crear una alternativa
     if (_esTextoIngles(descripcion)) {
       final autoresStr = libro.autores.isNotEmpty ? ' de ${libro.autores.join(", ")}' : '';
       final fechaStr = libro.fechaPublicacion != null ? ' (${libro.fechaPublicacion})' : '';

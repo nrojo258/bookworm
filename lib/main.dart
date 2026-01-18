@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +19,7 @@ import 'detalles_libro.dart';
 import 'public_domain.dart';
 import 'API/modelos.dart';
 import 'historial.dart';
+import 'desafios.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,6 +74,7 @@ class AppBookWorm extends StatelessWidget {
           return const Scaffold(body: Center(child: Text('Error: Datos de estadísticas no encontrados')));
         },
         '/historial': (context) => const Historial(),
+        '/desafios': (context) => const Desafios(),
         '/sincronizacion': (context) => const PantallaSincronizacion(),
         '/public_domain': (context) => const PublicDomain(),
         '/detalles_libro': (context) {
@@ -105,6 +110,55 @@ class _PaginaInicioState extends State<PaginaInicio> {
   bool _mostrarTodosAccesosRapidos = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<Libro> _librosAleatorios = [];
+  bool _cargandoAleatorios = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarLibrosAleatorios();
+  }
+
+  Future<void> _cargarLibrosAleatorios() async {
+    if (!mounted) return;
+    setState(() => _cargandoAleatorios = true);
+
+    try {
+      final temas = ['ficcion', 'misterio', 'fantasia', 'historia', 'ciencia', 'romance', 'aventura', 'tecnologia'];
+      final tema = temas[Random().nextInt(temas.length)];
+      
+      final url = Uri.parse('https://www.googleapis.com/books/v1/volumes?q=subject:$tema&maxResults=10&langRestrict=es&orderBy=newest');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['items'] != null) {
+          final List<Libro> libros = [];
+          for (var item in data['items']) {
+            final volumeInfo = item['volumeInfo'];
+            libros.add(Libro(
+              id: item['id'],
+              titulo: volumeInfo['title'] ?? 'Sin título',
+              autores: List<String>.from(volumeInfo['authors'] ?? ['Desconocido']),
+              descripcion: volumeInfo['description'],
+              urlMiniatura: volumeInfo['imageLinks']?['thumbnail']?.toString().replaceAll('http:', 'https:'),
+              fechaPublicacion: volumeInfo['publishedDate'],
+              numeroPaginas: volumeInfo['pageCount'],
+              categorias: List<String>.from(volumeInfo['categories'] ?? []),
+              urlLectura: volumeInfo['previewLink'],
+            ));
+          }
+          if (mounted) {
+            setState(() => _librosAleatorios = libros);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error cargando libros aleatorios: $e');
+    } finally {
+      if (mounted) setState(() => _cargandoAleatorios = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +269,9 @@ class _PaginaInicioState extends State<PaginaInicio> {
                             Navigator.pushNamed(context, '/clubs');
                           } else if (accion['etiqueta'] == 'Historial') {
                             Navigator.pushNamed(context, '/historial');
-                          } else if (['Favoritos', 'Desafíos', 'Configuración'].contains(accion['etiqueta'])) {
+                          } else if (accion['etiqueta'] == 'Desafíos') {
+                            Navigator.pushNamed(context, '/desafios');
+                          } else if (['Favoritos', 'Configuración'].contains(accion['etiqueta'])) {
                             Navigator.pushNamed(context, '/perfil');
                           }
                         },
@@ -373,7 +429,7 @@ class _PaginaInicioState extends State<PaginaInicio> {
                               style: EstilosApp.tituloPequeno,
                             ),
                             TextButton(
-                              onPressed: () => Navigator.pushNamed(context, '/perfil', arguments: {'seccionIndex': 1}),
+                              onPressed: () => Navigator.pushNamed(context, '/perfil', arguments: {'seccionIndex': 1, 'filtroEstado': 'completado'}),
                               child: const Text('Ver todos'),
                             ),
                           ],
@@ -448,7 +504,7 @@ class _PaginaInicioState extends State<PaginaInicio> {
                                               : const Icon(Icons.book, size: 40, color: AppColores.primario),
                                           title: Text(titulo, style: EstilosApp.cuerpoMedio, maxLines: 1, overflow: TextOverflow.ellipsis),
                                           subtitle: Text('Leído el $fecha', style: EstilosApp.cuerpoPequeno),
-                                          onTap: () => Navigator.pushNamed(context, '/perfil', arguments: {'seccionIndex': 1}),
+                                          onTap: () => Navigator.pushNamed(context, '/perfil', arguments: {'seccionIndex': 1, 'filtroEstado': 'completado'}),
                                         );
                                       },
                                     );
@@ -460,6 +516,95 @@ class _PaginaInicioState extends State<PaginaInicio> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: EstilosApp.tarjeta,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Descubre algo nuevo',
+                    style: EstilosApp.tituloMedio,
+                  ),
+                  const SizedBox(height: 16),
+                  if (_cargandoAleatorios)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_librosAleatorios.isEmpty)
+                    const Center(child: Text('No se encontraron sugerencias', style: EstilosApp.cuerpoMedio))
+                  else
+                    SizedBox(
+                      height: 240,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _librosAleatorios.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 16),
+                        itemBuilder: (context, index) {
+                          final libro = _librosAleatorios[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/detalles_libro',
+                                arguments: libro,
+                              );
+                            },
+                            child: SizedBox(
+                              width: 140,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: libro.urlMiniatura != null
+                                            ? Image.network(
+                                                libro.urlMiniatura!,
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                errorBuilder: (context, error, stackTrace) => 
+                                                    Container(color: Colors.grey[200], child: const Icon(Icons.book, color: Colors.grey, size: 40)),
+                                              )
+                                            : Container(color: Colors.grey[200], child: const Icon(Icons.book, color: Colors.grey, size: 40)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    libro.titulo,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    libro.autores.isNotEmpty ? libro.autores.first : 'Desconocido',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),

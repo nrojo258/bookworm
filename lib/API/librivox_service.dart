@@ -64,8 +64,6 @@ class LibriVoxService {
   }
 
   Future<Libro?> obtenerDetalles(String id) async {
-    // LibriVox API feed doesn't have a direct "get by id" in the same way, 
-    // but we can search by id if needed. Usually we have the full object.
     return null; 
   }
 

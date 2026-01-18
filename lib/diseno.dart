@@ -192,7 +192,7 @@ class EstilosApp {
     borderRadius: BorderRadius.circular(16),
   );
 
-  static Color rojo = AppColores.error; // Para sincronizacion_offline.dart
+  static Color rojo = AppColores.error;
 }
 
 class DatosApp {

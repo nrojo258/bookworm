@@ -311,6 +311,86 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
     );
   }
 
+  Widget _construirGraficoTiempo() {
+    final Map<String, dynamic> lecturaDiaria = widget.datosEstadisticas['lecturaDiaria'] ?? {};
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> datos = [];
+
+    for (int i = 6; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final key = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      final minutos = lecturaDiaria[key] ?? 0;
+      
+      datos.add({
+        'dia': ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday - 1],
+        'valor': minutos,
+        'fecha': '${date.day}/${date.month}',
+      });
+    }
+
+    double maxY = datos.map((e) => (e['valor'] as num).toDouble()).reduce((curr, next) => curr > next ? curr : next);
+    maxY = (maxY < 30) ? 30 : maxY + 10;
+
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: EstilosApp.tarjetaPlana,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxY,
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (group) => AppColores.primario,
+              tooltipBorderRadius: BorderRadius.circular(8),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                return BarTooltipItem(
+                  '${datos[group.x.toInt()]['fecha']}\n${rod.toY.toInt()} min',
+                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index >= 0 && index < datos.length) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(datos[index]['dia'] as String, style: EstilosApp.cuerpoPequeno),
+                    );
+                  }
+                  return const SizedBox();
+                },
+                reservedSize: 30,
+              ),
+            ),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, interval: maxY > 100 ? 50 : 10)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          gridData: FlGridData(show: true, drawVerticalLine: false),
+          borderData: FlBorderData(show: false),
+          barGroups: datos.asMap().entries.map((e) {
+            return BarChartGroupData(x: e.key, barRods: [
+              BarChartRodData(
+                toY: (e.value['valor'] as num).toDouble(),
+                color: AppColores.primario,
+                width: 16,
+                borderRadius: BorderRadius.circular(4),
+              )
+            ]);
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
   Widget _construirGraficoActual() {
     switch (_graficoSeleccionado) {
       case 0:
@@ -319,6 +399,8 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
         return _construirGraficoTorta();
       case 2:
         return _construirGraficoProgreso();
+      case 3:
+        return _construirGraficoTiempo();
       default:
         return _construirGraficoBarras();
     }
@@ -331,7 +413,7 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
         title: const Text('Estadísticas Detalladas'),
         backgroundColor: AppColores.primario,
         foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
         actions: const [BotonesBarraApp(rutaActual: '/perfil')],
       ),
       body: SingleChildScrollView(
@@ -367,6 +449,15 @@ class _GraficosEstadisticasState extends State<GraficosEstadisticas> {
                       estaSeleccionado: _graficoSeleccionado == 2,
                       icono: Icons.trending_up,
                       alPresionar: () => setState(() => _graficoSeleccionado = 2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: BotonSeccion(
+                      texto: 'Tiempo',
+                      estaSeleccionado: _graficoSeleccionado == 3,
+                      icono: Icons.timer,
+                      alPresionar: () => setState(() => _graficoSeleccionado = 3),
                     ),
                   ),
                 ],

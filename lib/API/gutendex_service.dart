@@ -23,7 +23,6 @@ class GutendexService {
         if (results == null) return [];
         final libros = results.take(limite).map((book) => _mapearLibro(book)).toList();
         
-        // Filtrar para priorizar libros en español
         return await _filtrarPorIdioma(libros);
       }
       return [];
@@ -43,7 +42,6 @@ class GutendexService {
         if (results == null) return [];
         final libros = results.take(limite).map((book) => _mapearLibro(book)).toList();
         
-        // Filtrar para priorizar libros en español
         return await _filtrarPorIdioma(libros);
       }
       return [];
@@ -133,7 +131,6 @@ class GutendexService {
     
     final descripcion = libro.descripcion!;
     
-    // Si la descripción está en inglés, crear una alternativa en español
     if (_esTextoIngles(descripcion)) {
       final autoresStr = libro.autores.isNotEmpty ? ' de ${libro.autores.join(', ')}' : '';
       final categoriasStr = libro.categorias.isNotEmpty ? ' Género: ${libro.categorias.join(', ')}.' : '';
@@ -165,7 +162,6 @@ class GutendexService {
   }
 
   Future<List<Libro>> _filtrarPorIdioma(List<Libro> libros) async {
-    // Priorizar libros que tengan español en el título o autores hispanos
     final librosPriorizados = <Libro>[];
     final otrosLibros = <Libro>[];
     
@@ -184,7 +180,6 @@ class GutendexService {
     final tituloLower = libro.titulo.toLowerCase();
     final autoresLower = libro.autores.join(' ').toLowerCase();
     
-    // Palabras comunes en español
     final palabrasEspanol = [
       'el', 'la', 'los', 'las', 'del', 'de', 'que', 'y', 'en', 'un', 'una', 'unos', 'unas',
       'don', 'doña', 'señor', 'señora', 'novela', 'poesía', 'historia', 'español', 'española'
@@ -196,7 +191,6 @@ class GutendexService {
       }
     }
     
-    // Autores hispanos conocidos
     final autoresHispanos = [
       'cervantes', 'garcía', 'lorca', 'neruda', 'borges', 'cortázar', 'marquez',
       'vallarta', 'paz', 'fuentes', 'allende', 'vargas llosa', 'unamuno', 'góngora'

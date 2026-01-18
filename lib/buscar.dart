@@ -35,7 +35,6 @@ class _BuscarState extends State<Buscar> {
   bool _estaCargando = false;
   bool _haBuscado = false;
   
-  // Cache para evitar múltiples búsquedas
   final Map<String, List<Libro>> _cacheBusquedas = {};
   final Map<String, DateTime> _cacheTiempos = {};
   final Duration _cacheDuracion = const Duration(minutes: 5);
@@ -177,30 +176,25 @@ class _BuscarState extends State<Buscar> {
       
       List<Future<List<Libro>>> busquedas = [];
       
-      // USAR APIS SIN RESTRICCIONES
       if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Libros') {
-        // OpenLibrary - Sin límites
         busquedas.add(_servicioOpenLibrary.buscarLibros(
           consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
           limite: 20,
         ));
         
-        // Gutendex - Dominio público
         busquedas.add(_servicioGutendex.buscarLibros(
           consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
           limite: 20,
         ));
         
-        // Internet Archive - Sin límites
         busquedas.add(_servicioInternetArchive.buscarLibros(
           consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
           limite: 15,
         ));
         
-        // Google Books - SOLO si el término es específico
         if (consultaBusqueda.isNotEmpty && 
             !consultaBusqueda.toLowerCase().contains('populares') &&
             !consultaBusqueda.toLowerCase().contains('fiction')) {
@@ -209,7 +203,6 @@ class _BuscarState extends State<Buscar> {
       }
       
       if (_formatoSeleccionado == 'Todos los formatos' || _formatoSeleccionado == 'Audiolibros') {
-        // LibriVox - Audiolibros gratuitos
         busquedas.add(_servicioLibriVox.buscarLibros(
           consultaBusqueda,
           genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
@@ -220,17 +213,14 @@ class _BuscarState extends State<Buscar> {
       final listasResultados = await Future.wait(busquedas);
       List<Libro> resultados = [];
       
-      // Combinar y procesar resultados
       for (var lista in listasResultados) {
         for (var libro in lista) {
           if (!_esLibroDuplicado(libro, resultados)) {
-            // Calcular precio realista basado en múltiples factores
             resultados.add(_procesarLibroConPrecio(libro));
           }
         }
       }
       
-      // Aplicar filtros de formato
       if (_formatoSeleccionado != null && _formatoSeleccionado != 'Todos los formatos') {
         if (_formatoSeleccionado == 'Audiolibros') {
           resultados = resultados.where((libro) => libro.esAudiolibro).toList();
@@ -239,7 +229,6 @@ class _BuscarState extends State<Buscar> {
         }
       }
       
-      // Ordenar: gratuitos primero, luego por precio ascendente
       resultados.sort((a, b) {
         final precioA = a.precio ?? double.infinity;
         final precioB = b.precio ?? double.infinity;
@@ -249,7 +238,6 @@ class _BuscarState extends State<Buscar> {
         return precioA.compareTo(precioB);
       });
       
-      // Guardar en cache
       _cacheBusquedas[cacheKey] = resultados;
       _cacheTiempos[cacheKey] = DateTime.now();
       
@@ -273,7 +261,7 @@ class _BuscarState extends State<Buscar> {
       return await _servicioGoogleBooks.buscarLibros(
         consulta,
         genero: _generoSeleccionado == 'Todos los géneros' ? null : _generoSeleccionado,
-        limite: 3, // Límite bajo para evitar cuota
+        limite: 3,
         pais: 'ES',
       );
     } catch (e) {
@@ -283,16 +271,13 @@ class _BuscarState extends State<Buscar> {
   }
 
   Libro _procesarLibroConPrecio(Libro libro) {
-    // Si ya tiene precio real de Google Books, mantenerlo
     if (libro.precio != null && libro.precio! > 0 && libro.ofertas.isNotEmpty) {
       return libro;
     }
     
-    // Calcular precio basado en múltiples factores
     double precioCalculado = _calcularPrecioRealista(libro);
-    String moneda = 'EUR'; // Euros para España
+    String moneda = 'EUR';
     
-    // Determinar si es gratuito
     bool esGratuito = precioCalculado == 0.0 || 
                      libro.id.startsWith('guten_') || 
                      libro.id.startsWith('ia_') ||
@@ -312,7 +297,6 @@ class _BuscarState extends State<Buscar> {
     double precioBase = 12.99;
     final tituloLower = libro.titulo.toLowerCase();
     
-    // 1. POR FUENTE (dominio público = gratis)
     if (libro.id.startsWith('guten_') || 
         libro.id.startsWith('ia_') || 
         libro.id.startsWith('ol_') ||
@@ -323,7 +307,6 @@ class _BuscarState extends State<Buscar> {
       return 0.0;
     }
     
-    // 2. POR TÍTULO POPULAR
     if (tituloLower.contains('harry potter')) {
       precioBase = 19.99;
     } else if (tituloLower.contains('señor de los anillos') || 
@@ -340,7 +323,6 @@ class _BuscarState extends State<Buscar> {
       precioBase = 15.99;
     }
     
-    // 3. POR GÉNERO/CATEGORÍA
     if (libro.categorias.isNotEmpty) {
       final categoriasLower = libro.categorias.map((c) => c.toLowerCase()).toList();
       
@@ -361,7 +343,6 @@ class _BuscarState extends State<Buscar> {
       }
     }
     
-    // 4. POR AUTOR
     if (libro.autores.isNotEmpty) {
       final autorLower = libro.autores.first.toLowerCase();
       if (autorLower.contains('rowling')) {
@@ -381,7 +362,6 @@ class _BuscarState extends State<Buscar> {
       }
     }
     
-    // 5. POR NÚMERO DE PÁGINAS
     if (libro.numeroPaginas != null) {
       if (libro.numeroPaginas! < 100) {
         precioBase -= 3.0;
@@ -390,7 +370,6 @@ class _BuscarState extends State<Buscar> {
       }
     }
     
-    // 6. POR FECHA
     if (libro.fechaPublicacion != null) {
       final anoMatch = RegExp(r'\d{4}').firstMatch(libro.fechaPublicacion!);
       if (anoMatch != null) {
@@ -405,7 +384,6 @@ class _BuscarState extends State<Buscar> {
       }
     }
     
-    // 7. POR CALIFICACIÓN
     if (libro.calificacionPromedio != null) {
       if (libro.calificacionPromedio! > 4.5) {
         precioBase += 1.5;
@@ -414,15 +392,12 @@ class _BuscarState extends State<Buscar> {
       }
     }
     
-    // 8. AUDIOLIBROS MÁS CAROS
     if (libro.esAudiolibro) {
       precioBase += 5.0;
     }
     
-    // Asegurar límites razonables
     precioBase = precioBase.clamp(0.0, 35.0);
     
-    // Redondear a .99
     precioBase = (precioBase.floorToDouble() + 0.99);
     
     return double.parse(precioBase.toStringAsFixed(2));

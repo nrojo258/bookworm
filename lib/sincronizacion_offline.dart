@@ -386,7 +386,7 @@ class _PantallaSincronizacionState extends State<PantallaSincronizacion> {
         title: const Text('Sincronización'),
         backgroundColor: AppColores.primario,
         foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
         actions: const [BotonesBarraApp(rutaActual: '/perfil')],
       ),
       body: SingleChildScrollView(
